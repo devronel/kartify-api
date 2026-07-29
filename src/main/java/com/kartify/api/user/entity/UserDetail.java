@@ -31,17 +31,17 @@ public class UserDetail extends BaseEntity {
     @Column(name = "last_name", nullable = false, length = 100)
     private String lastName;
 
-    @Column(name = "phone", nullable = false, length = 30)
+    @Column(name = "phone", length = 30)
     private String phone;
 
-    @Column(name = "date_of_birth", nullable = false)
+    @Column(name = "date_of_birth")
     private LocalDate dateOfBirth;
 
-    @Column(name = "gender", nullable = false, length = 6)
+    @Column(name = "gender", length = 6)
     private String gender;
 
     // --- Constructor ---
-    protected UserDetail() {}
+    public UserDetail() {}
     public UserDetail(User user, String firstName, String lastName, String phone, LocalDate dateOfBirth, String gender) {
         this.user = user;
         this.firstName = firstName;

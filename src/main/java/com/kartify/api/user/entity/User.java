@@ -50,10 +50,10 @@ public class User extends BaseEntity {
 
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
-    private UserStatus status;
+    private UserStatus status = UserStatus.ACTIVE;
 
     // --- Constructors ---
-    protected User() {}
+    public User() {}
     public User(String email, String password, UserStatus status) {
         this.email = email;
         this.password = password;
@@ -63,8 +63,8 @@ public class User extends BaseEntity {
     // --- Getter and Setter ---
     public Long getId() { return id; }
 
-    public UserDetail getProfile() { return detail; }
-    public void setProfile(UserDetail detail) {
+    public UserDetail getUserDetail() { return detail; }
+    public void setUserDetail(UserDetail detail) {
         if (detail == null) {
             if (this.detail != null) {
                 this.detail.setUser(null);
