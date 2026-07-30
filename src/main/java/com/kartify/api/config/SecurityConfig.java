@@ -50,18 +50,18 @@ public class SecurityConfig {
     }
 
     // --- CORS — allow Next.js (localhost:3000) to send credentialed requests ---
-    // @Bean
-    // public CorsConfigurationSource corsConfigurationSource() {
-    //     CorsConfiguration config = new CorsConfiguration();
-    //     config.setAllowedOrigins(List.of("http://localhost:3000"));
-    //     config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-    //     config.setAllowedHeaders(List.of("*"));
-    //     config.setAllowCredentials(true); // critical — allows the session cookie to be sent cross-origin
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(List.of("http://localhost:3000"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(true); // critical — allows the session cookie to be sent cross-origin
 
-    //     UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-    //     source.registerCorsConfiguration("/**", config);
-    //     return source;
-    // }
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
+    }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -70,6 +70,9 @@ public class SecurityConfig {
             .csrf(csrf -> csrf
                 .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                 .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
+            )
+            .securityContext(context -> context
+                .requireExplicitSave(false)
             )
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)

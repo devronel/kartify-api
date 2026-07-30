@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.kartify.api.auth.dto.AuthResponse;
+import com.kartify.api.auth.dto.LoginRequest;
 import com.kartify.api.auth.dto.RegisterRequest;
 import com.kartify.api.auth.service.AuthService;
 
@@ -24,6 +25,12 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
         AuthResponse response = authService.register(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
+        AuthResponse response = authService.login(request);
         return ResponseEntity.ok(response);
     }
 

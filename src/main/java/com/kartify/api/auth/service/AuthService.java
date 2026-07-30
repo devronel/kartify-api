@@ -3,11 +3,13 @@ package com.kartify.api.auth.service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.kartify.api.auth.dto.AuthResponse;
+import com.kartify.api.auth.dto.LoginRequest;
 import com.kartify.api.auth.dto.RegisterRequest;
 import com.kartify.api.user.entity.User;
 import com.kartify.api.user.entity.UserDetail;
@@ -21,6 +23,9 @@ public class AuthService {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private AuthenticationManager authenticationManager;
 
     public AuthResponse register(RegisterRequest request) {
 
@@ -42,6 +47,20 @@ public class AuthService {
         User saved = userRepository.save(user);
 
         return new AuthResponse(saved.getId(), saved.getEmail());
-        
+    }
+
+    public AuthResponse login(LoginRequest request) {
+        // This triggers CustomUserDetailsService + password check internally
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(request.email(), request.password())
+        );
+
+        // Store the authenticated user in the security context — this is what creates the session
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        User user = userRepository.findByEmail(request.email())
+                .orElseThrow(() -> new IllegalStateException("User not found after authentication"));
+
+        return new AuthResponse(user.getId(), user.getEmail());
     }
 }
