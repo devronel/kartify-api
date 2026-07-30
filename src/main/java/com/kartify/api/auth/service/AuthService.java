@@ -27,6 +27,7 @@ public class AuthService {
     @Autowired
     private AuthenticationManager authenticationManager;
 
+    // --- Register ---
     public AuthResponse register(RegisterRequest request) {
 
         if (userRepository.existsByEmail(request.email())) {
@@ -46,10 +47,11 @@ public class AuthService {
 
         User saved = userRepository.save(user);
 
-        return new AuthResponse(saved.getId(), saved.getEmail());
+        return new AuthResponse(saved.getId(), saved.getEmail(), user.getUserDetail().getFirstName(), user.getUserDetail().getLastName());
     }
 
-    public AuthResponse login(LoginRequest request) {
+    // --- Login ---
+    public AuthResponse authenticate(LoginRequest request) {
         // This triggers CustomUserDetailsService + password check internally
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.email(), request.password())
@@ -61,6 +63,6 @@ public class AuthService {
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new IllegalStateException("User not found after authentication"));
 
-        return new AuthResponse(user.getId(), user.getEmail());
+        return new AuthResponse(user.getId(), user.getEmail(), user.getUserDetail().getFirstName(), user.getUserDetail().getLastName());
     }
 }
