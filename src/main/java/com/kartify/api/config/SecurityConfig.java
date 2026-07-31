@@ -22,25 +22,16 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.kartify.api.security.CustomUserDetailsService;
 
+import jakarta.servlet.http.HttpServletResponse;
+
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
-
-    @Autowired
-    private CustomUserDetailsService userDetailsService;
 
     // --- Password hashing — Spring's equivalent of Laravel's bcrypt() default ---
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
-    }
-
-    // --- Tells Spring how to authenticate: use our UserDetailsService + password encoder ---
-    @Bean
-    public DaoAuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
-        provider.setPasswordEncoder(passwordEncoder());
-        return provider;
     }
 
     // --- Exposes AuthenticationManager so AuthService can call authenticate() during login ---
@@ -77,8 +68,15 @@ public class SecurityConfig {
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
             )
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint((request, response, authException) -> {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"success\":false,\"message\":\"Unauthorized\"}");
+                })
+            )
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/register", "/api/auth/login", "/api/auth/csrf-cookie").permitAll()
+                .requestMatchers("/api/register", "/api/authenticate", "/api/csrf-cookie").permitAll()
                 .requestMatchers("/api/products/**", "/api/categories/**", "/api/auth/hello").permitAll()
                 .anyRequest().authenticated()
             );

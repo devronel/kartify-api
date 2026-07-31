@@ -47,7 +47,12 @@ public class AuthService {
 
         User saved = userRepository.save(user);
 
-        return new AuthResponse(saved.getId(), saved.getEmail(), user.getUserDetail().getFirstName(), user.getUserDetail().getLastName());
+        return new AuthResponse(
+            saved.getId(), 
+            saved.getEmail(), 
+            user.getUserDetail().getFirstName(), 
+            user.getUserDetail().getLastName()
+        );
     }
 
     // --- Login ---
@@ -63,6 +68,11 @@ public class AuthService {
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new IllegalStateException("User not found after authentication"));
 
-        return new AuthResponse(user.getId(), user.getEmail(), user.getUserDetail().getFirstName(), user.getUserDetail().getLastName());
+        return new AuthResponse(
+            user.getId(), 
+            user.getEmail(), 
+            user.getUserDetail().getFirstName(), 
+            user.getUserDetail().getLastName()
+        );
     }
 }

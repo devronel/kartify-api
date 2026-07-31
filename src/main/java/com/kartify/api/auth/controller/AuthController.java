@@ -17,7 +17,7 @@ import com.kartify.api.shared.dto.ApiResponse;
 import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/api")
 public class AuthController {
     
     @Autowired
@@ -29,8 +29,8 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("Account Created!", response));
     }
 
-    @PostMapping("/login")
-    public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
+    @PostMapping("/authenticate")
+    public ResponseEntity<ApiResponse<AuthResponse>> authenticate(@Valid @RequestBody LoginRequest request) {
         AuthResponse response = authService.authenticate(request);
         return ResponseEntity.ok(ApiResponse.success("Login Successful!", response));
     }
