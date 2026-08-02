@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-    // Handles @Valid failures (e.g. missing firstName, invalid email)
+    // --- Handles @Valid failures (e.g. missing firstName, invalid email) ---
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidationErrors(MethodArgumentNotValidException ex) {
         Map<String, String> fieldErrors = new HashMap<>();
@@ -24,14 +24,29 @@ public class GlobalExceptionHandler {
 
         Map<String, Object> body = new HashMap<>();
         body.put("timestamp", LocalDateTime.now());
-        body.put("status", HttpStatus.BAD_REQUEST.value());
+        body.put("status", HttpStatus.UNPROCESSABLE_CONTENT.value());
         body.put("message", "Validation failed");
         body.put("errors", fieldErrors);
 
-        return ResponseEntity.badRequest().body(body);
+        return ResponseEntity.unprocessableContent().body(body);
     }
 
-    // Handles your custom errors, e.g. "Email is already registered"
+    // --- Custom Exception That Carries the Field Name ---
+    @ExceptionHandler(FieldValidationException.class)
+    public ResponseEntity<Map<String, Object>> handleFieldValidation(FieldValidationException ex) {
+        Map<String, String> fieldErrors = new HashMap<>();
+        fieldErrors.put(ex.getField(), ex.getMessage());
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", HttpStatus.UNPROCESSABLE_CONTENT.value());
+        body.put("message", "Validation failed");
+        body.put("errors", fieldErrors);
+
+        return ResponseEntity.unprocessableContent().body(body);
+    }
+
+    // --- Handles your custom errors, e.g. "Email is already registered" ---
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, Object>> handleIllegalArgument(IllegalArgumentException ex) {
         Map<String, Object> body = new HashMap<>();
@@ -42,7 +57,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(body);
     }
 
-    // Catch-all fallback for anything unexpected
+    // --- Catch-all fallback for anything unexpected ---
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneric(Exception ex) {
         Map<String, Object> body = new HashMap<>();

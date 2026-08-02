@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import com.kartify.api.auth.dto.AuthResponse;
 import com.kartify.api.auth.dto.LoginRequest;
 import com.kartify.api.auth.dto.RegisterRequest;
+import com.kartify.api.exception.FieldValidationException;
 import com.kartify.api.user.entity.User;
 import com.kartify.api.user.entity.UserDetail;
 import com.kartify.api.user.repository.UserRepository;
@@ -30,8 +31,12 @@ public class AuthService {
     // --- Register ---
     public AuthResponse register(RegisterRequest request) {
 
+        if (!request.password().equals(request.confirmPassword())) {
+            throw new FieldValidationException("password", "Passwords do not match");
+        }
+
         if (userRepository.existsByEmail(request.email())) {
-            throw new IllegalArgumentException("Email is already registered");
+            throw new FieldValidationException("email", "Email is already registered");
         }
 
         User user = new User();
