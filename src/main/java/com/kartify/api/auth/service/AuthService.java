@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -12,6 +13,7 @@ import com.kartify.api.auth.dto.AuthResponse;
 import com.kartify.api.auth.dto.LoginRequest;
 import com.kartify.api.auth.dto.RegisterRequest;
 import com.kartify.api.exception.FieldValidationException;
+import com.kartify.api.security.CustomUserDetails;
 import com.kartify.api.user.entity.User;
 import com.kartify.api.user.entity.UserDetail;
 import com.kartify.api.user.repository.UserRepository;
@@ -64,7 +66,7 @@ public class AuthService {
     public AuthResponse authenticate(LoginRequest request) {
         // This triggers CustomUserDetailsService + password check internally
         Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.email(), request.password())
+            new UsernamePasswordAuthenticationToken(request.email(), request.password())
         );
 
         // Store the authenticated user in the security context — this is what creates the session
@@ -79,5 +81,19 @@ public class AuthService {
             user.getUserDetail().getFirstName(), 
             user.getUserDetail().getLastName()
         );
+    }
+
+    // --- Get authenticated user information ---
+    public AuthResponse getUser(CustomUserDetails principal){
+        User user = principal.getUser();
+
+        AuthResponse response = new AuthResponse(
+                user.getId(),
+                user.getEmail(),
+                user.getUserDetail().getFirstName(),
+                user.getUserDetail().getFirstName()
+        );
+
+        return response;
     }
 }

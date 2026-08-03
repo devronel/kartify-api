@@ -60,6 +60,7 @@ public class GlobalExceptionHandler {
     // --- Catch-all fallback for anything unexpected ---
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneric(Exception ex) {
+        System.out.println(ex.getMessage());
         Map<String, Object> body = new HashMap<>();
         body.put("timestamp", LocalDateTime.now());
         body.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
