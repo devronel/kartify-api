@@ -4,7 +4,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -58,7 +57,8 @@ public class AuthService {
             saved.getId(), 
             saved.getEmail(), 
             user.getUserDetail().getFirstName(), 
-            user.getUserDetail().getLastName()
+            user.getUserDetail().getLastName(),
+            user.getRole()
         );
     }
 
@@ -79,7 +79,8 @@ public class AuthService {
             user.getId(), 
             user.getEmail(), 
             user.getUserDetail().getFirstName(), 
-            user.getUserDetail().getLastName()
+            user.getUserDetail().getLastName(),
+            user.getRole()
         );
     }
 
@@ -91,7 +92,8 @@ public class AuthService {
                 user.getId(),
                 user.getEmail(),
                 user.getUserDetail().getFirstName(),
-                user.getUserDetail().getFirstName()
+                user.getUserDetail().getFirstName(),
+                user.getRole()
         );
 
         return response;

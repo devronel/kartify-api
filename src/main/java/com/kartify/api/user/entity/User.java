@@ -4,9 +4,8 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.springframework.context.annotation.Profile;
-
 import com.kartify.api.shared.BaseEntity;
+import com.kartify.api.user.enums.Role;
 import com.kartify.api.user.enums.UserStatus;
 
 import jakarta.persistence.CascadeType;
@@ -50,6 +49,10 @@ public class User extends BaseEntity {
 
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
+    private Role role = Role.CUSTOMER;
+
+    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
     private UserStatus status = UserStatus.ACTIVE;
 
     // --- Constructors ---
@@ -85,6 +88,9 @@ public class User extends BaseEntity {
 
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
+
+    public Role getRole() { return role; }
+    public void setRole(Role role) { this.role = role; }
 
     public UserStatus getStatus() { return status; }
     public void setStatus(UserStatus status) { this.status = status; }
