@@ -73,6 +73,13 @@ public class SecurityConfig {
                     response.getWriter().write("{\"success\":false,\"message\":\"Unauthorized\"}");
                 })
             )
+            .logout(logout -> logout
+                .logoutUrl("/api/logout")
+                .logoutSuccessHandler((req, res, auth) -> {
+                    System.out.println("Logout succesfull");
+                    res.setStatus(HttpServletResponse.SC_OK); // Stop the 302 redirect, send 200 OK
+                })
+            )
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/register", "/api/authenticate", "/api/csrf-cookie").permitAll()
                 .requestMatchers("/api/products/**", "/api/categories/**").permitAll()
