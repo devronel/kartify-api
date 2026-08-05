@@ -94,4 +94,8 @@ public class User extends BaseEntity {
 
     public UserStatus getStatus() { return status; }
     public void setStatus(UserStatus status) { this.status = status; }
+
+    public String getFullName() {
+        return this.getUserDetail().getFirstName() + " " + this.getUserDetail().getLastName(); 
+    }
 }

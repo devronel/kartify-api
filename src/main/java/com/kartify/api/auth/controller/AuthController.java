@@ -41,9 +41,9 @@ public class AuthController {
     }
 
     @GetMapping("/user")
-    public ResponseEntity<AuthResponse> getUser(@AuthenticationPrincipal CustomUserDetails principal){
+    public ResponseEntity<ApiResponse<AuthResponse>> getUser(@AuthenticationPrincipal CustomUserDetails principal){
         AuthResponse user = authService.getUser(principal);
-        return ResponseEntity.ok(user);
+        return ResponseEntity.ok(ApiResponse.success("Authenticated User", user));
     }
 
     @GetMapping("/csrf-cookie")

@@ -5,7 +5,6 @@ import com.kartify.api.user.enums.Role;
 public record AuthResponse (
     Long id,
     String email,
-    String firstName,
-    String lastName,
+    String fullName,
     Role role
 ) {}
