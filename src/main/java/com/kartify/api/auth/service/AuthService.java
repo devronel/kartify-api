@@ -1,5 +1,8 @@
 package com.kartify.api.auth.service;
 
+import java.time.LocalDateTime;
+import java.util.UUID;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -13,9 +16,14 @@ import com.kartify.api.auth.dto.LoginRequest;
 import com.kartify.api.auth.dto.RegisterRequest;
 import com.kartify.api.exception.FieldValidationException;
 import com.kartify.api.security.CustomUserDetails;
+import com.kartify.api.service.EmailService;
+import com.kartify.api.user.entity.PasswordResetToken;
 import com.kartify.api.user.entity.User;
 import com.kartify.api.user.entity.UserDetail;
+import com.kartify.api.user.repository.PasswordResetTokenRepository;
 import com.kartify.api.user.repository.UserRepository;
+
+import jakarta.mail.MessagingException;
 
 @Service
 public class AuthService {
@@ -24,10 +32,16 @@ public class AuthService {
     private UserRepository userRepository;
 
     @Autowired
+    private PasswordResetTokenRepository passwordResetTokenRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @Autowired
     private AuthenticationManager authenticationManager;
+
+    @Autowired
+    private EmailService emailService;
 
     // --- Register ---
     public AuthResponse register(RegisterRequest request) {
@@ -76,6 +90,34 @@ public class AuthService {
     public AuthResponse getUser(CustomUserDetails principal){
         User user = principal.getUser();
         return this.buildAuthResponse(user);
+    }
+
+    // --- Forgot Password ---
+    public String forgotPassword(String email) throws MessagingException
+    {
+        User user = userRepository.findByEmail(email).orElseThrow(() ->
+            new FieldValidationException("email", "Email not found.")
+        );
+
+        String token = UUID.randomUUID().toString();
+
+        PasswordResetToken resetToken = new PasswordResetToken();
+
+        resetToken.setEmail(user.getEmail());
+        resetToken.setToken(token);
+        resetToken.setExpiryDate(LocalDateTime.now().plusMinutes(15));
+
+        passwordResetTokenRepository.save(resetToken);
+
+        String resetUrl = "http://localhost:3000/reset-password?token=" + token;
+
+
+        emailService.sendEmail(
+            user.getEmail(),
+            resetUrl
+        );
+
+        return "Email sent";
     }
 
     private AuthResponse buildAuthResponse(User user){

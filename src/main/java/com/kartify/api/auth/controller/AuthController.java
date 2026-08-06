@@ -1,5 +1,7 @@
 package com.kartify.api.auth.controller;
 
+import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -16,6 +18,7 @@ import com.kartify.api.auth.service.AuthService;
 import com.kartify.api.security.CustomUserDetails;
 import com.kartify.api.shared.dto.ApiResponse;
 
+import jakarta.mail.MessagingException;
 import jakarta.validation.Valid;
 
 @RestController
@@ -41,6 +44,13 @@ public class AuthController {
     public ResponseEntity<ApiResponse<AuthResponse>> getUser(@AuthenticationPrincipal CustomUserDetails principal){
         AuthResponse user = authService.getUser(principal);
         return ResponseEntity.ok(ApiResponse.success("Authenticated User", user));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<String> forgotPassword(@RequestBody Map<String, Object> payload) throws MessagingException {
+        String email = (String) payload.get("email");
+        String sendEmail = authService.forgotPassword(email);
+        return ResponseEntity.ok(sendEmail);
     }
 
     @GetMapping("/csrf-cookie")

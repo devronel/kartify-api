@@ -81,7 +81,7 @@ public class SecurityConfig {
                 })
             )
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/register", "/api/authenticate", "/api/csrf-cookie").permitAll()
+                .requestMatchers("/api/register", "/api/authenticate", "/api/csrf-cookie", "/api/forgot-password").permitAll()
                 .requestMatchers("/api/products/**", "/api/categories/**").permitAll()
                 .anyRequest().authenticated()
             );
