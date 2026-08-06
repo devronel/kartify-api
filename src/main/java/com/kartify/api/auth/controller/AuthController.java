@@ -25,8 +25,11 @@ import jakarta.validation.Valid;
 @RequestMapping("/api")
 public class AuthController {
     
-    @Autowired
-    private AuthService authService;
+    private final AuthService authService;
+
+    public AuthController(AuthService authService){
+        this.authService = authService;
+    }
 
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<AuthResponse>> register(@Valid @RequestBody RegisterRequest request) {
@@ -47,10 +50,10 @@ public class AuthController {
     }
 
     @PostMapping("/forgot-password")
-    public ResponseEntity<String> forgotPassword(@RequestBody Map<String, Object> payload) throws MessagingException {
+    public ResponseEntity<ApiResponse<String>> forgotPassword(@RequestBody Map<String, Object> payload) throws MessagingException {
         String email = (String) payload.get("email");
         String sendEmail = authService.forgotPassword(email);
-        return ResponseEntity.ok(sendEmail);
+        return ResponseEntity.ok(ApiResponse.success(sendEmail, null));
     }
 
     @GetMapping("/csrf-cookie")

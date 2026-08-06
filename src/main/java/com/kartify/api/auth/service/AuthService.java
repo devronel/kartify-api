@@ -4,12 +4,15 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.Context;
 
 import com.kartify.api.auth.dto.AuthResponse;
 import com.kartify.api.auth.dto.LoginRequest;
@@ -28,20 +31,31 @@ import jakarta.mail.MessagingException;
 @Service
 public class AuthService {
     
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final AuthenticationManager authenticationManager;
+    private final TemplateEngine templateEngine;
+    private final EmailService emailService;
 
-    @Autowired
-    private PasswordResetTokenRepository passwordResetTokenRepository;
+    @Value("${FRONTEND_URL}")
+    private String frontendUrl;
 
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-
-    @Autowired
-    private AuthenticationManager authenticationManager;
-
-    @Autowired
-    private EmailService emailService;
+    public AuthService(
+        UserRepository userRepository,
+        PasswordResetTokenRepository passwordResetTokenRepository,
+        PasswordEncoder passwordEncoder,
+        AuthenticationManager authenticationManager,
+        TemplateEngine templateEngine,
+        EmailService emailService
+    ){
+        this.userRepository = userRepository;
+        this.passwordResetTokenRepository = passwordResetTokenRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.authenticationManager = authenticationManager;
+        this.templateEngine = templateEngine;
+        this.emailService = emailService;
+    }
 
     // --- Register ---
     public AuthResponse register(RegisterRequest request) {
@@ -102,22 +116,25 @@ public class AuthService {
         String token = UUID.randomUUID().toString();
 
         PasswordResetToken resetToken = new PasswordResetToken();
-
         resetToken.setEmail(user.getEmail());
         resetToken.setToken(token);
         resetToken.setExpiryDate(LocalDateTime.now().plusMinutes(15));
 
         passwordResetTokenRepository.save(resetToken);
 
-        String resetUrl = "http://localhost:3000/reset-password?token=" + token;
-
+        Context context = new Context();
+        context.setVariable("firstName", user.getUserDetail().getFirstName());
+        context.setVariable("expiryMinutes", 15);
+        context.setVariable("resetUrl",  frontendUrl + "/reset-password?token=" + token);
+        String htmlContent = templateEngine.process("password-reset-email", context);
 
         emailService.sendEmail(
             user.getEmail(),
-            resetUrl
+            "Password Reset Link",
+            htmlContent
         );
 
-        return "Email sent";
+        return "Password reset sent to your email.";
     }
 
     private AuthResponse buildAuthResponse(User user){
