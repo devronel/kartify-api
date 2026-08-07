@@ -1,9 +1,9 @@
 package com.kartify.api.auth.service;
 
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
-import java.util.UUID;
+import java.util.Base64;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -11,11 +11,13 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
 import com.kartify.api.auth.dto.AuthResponse;
 import com.kartify.api.auth.dto.LoginRequest;
+import com.kartify.api.auth.dto.PasswordResetRequest;
 import com.kartify.api.auth.dto.RegisterRequest;
 import com.kartify.api.exception.FieldValidationException;
 import com.kartify.api.security.CustomUserDetails;
@@ -113,19 +115,22 @@ public class AuthService {
             new FieldValidationException("email", "Email not found.")
         );
 
-        String token = UUID.randomUUID().toString();
+        SecureRandom random = new SecureRandom();
+        byte[] bytes = new byte[32];
+        random.nextBytes(bytes);
+        String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
 
         PasswordResetToken resetToken = new PasswordResetToken();
         resetToken.setEmail(user.getEmail());
         resetToken.setToken(token);
-        resetToken.setExpiryDate(LocalDateTime.now().plusMinutes(15));
+        resetToken.setExpiresAt(LocalDateTime.now().plusMinutes(30));
 
         passwordResetTokenRepository.save(resetToken);
 
         Context context = new Context();
         context.setVariable("firstName", user.getUserDetail().getFirstName());
         context.setVariable("expiryMinutes", 15);
-        context.setVariable("resetUrl",  frontendUrl + "/reset-password?token=" + token);
+        context.setVariable("resetUrl",  frontendUrl + "/reset-password?email=" + user.getEmail() + "&token=" + token);
         String htmlContent = templateEngine.process("password-reset-email", context);
 
         emailService.sendEmail(
@@ -137,6 +142,46 @@ public class AuthService {
         return "Password reset sent to your email.";
     }
 
+    // --- Change password ---
+    @Transactional
+    public String resetPasswordWithToken(PasswordResetRequest request){
+
+        // --- Check the email if have exisiting user ---
+        User user = userRepository.findByEmail(request.email()).orElseThrow(() ->
+            new FieldValidationException("email", "Email not found.")
+        );
+
+        // --- Check if the email and token exists ---
+        PasswordResetToken resetToken = passwordResetTokenRepository.findByEmailAndToken(request.email(), request.token())
+            .orElseThrow(() ->
+                new FieldValidationException("token", "Invalid token.")
+            );
+
+        // --- Check if the token is aleady expired ---
+        if (resetToken.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new FieldValidationException("token", "Token has expired.");
+        }
+
+        // --- Check if token is already used ---
+        if (resetToken.isUsed()) {
+            throw new FieldValidationException("token", "Token already used.");
+        }
+
+        if (!request.password().equals(request.confirmPassword())) {
+            throw new FieldValidationException("password", "Password do not match");
+        }
+
+        // --- Hash the new password and save ---
+        user.setPassword(passwordEncoder.encode(request.password()));
+        userRepository.save(user);
+
+        // --- Invalidate the token to prevent reuse ---
+        resetToken.setUsedAt(LocalDateTime.now());
+        passwordResetTokenRepository.save(resetToken);
+
+        return "Password changed successfully";
+    }
+    
     private AuthResponse buildAuthResponse(User user){
         return new AuthResponse(
             user.getId(),

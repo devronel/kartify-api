@@ -25,12 +25,33 @@ public class PasswordResetToken {
     @Column(nullable = false)
     private String email;
 
-    @Column(name = "expiry_date", nullable = false)
-    private LocalDateTime expiryDate;
+    @Column(name = "expires_at", nullable = false)
+    private LocalDateTime expiresAt;
+
+    @Column(name = "used_at")
+    private LocalDateTime usedAt;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    public PasswordResetToken() {}
+    public PasswordResetToken(
+        String token,
+        String email,
+        LocalDateTime expiresAt,
+        LocalDateTime usedAt
+    ){
+        this.token = token;
+        this.email = email;
+        this.expiresAt = expiresAt;
+        this.usedAt = usedAt;
+    }
+
+    // --- Helper functions ---
+    public boolean isUsed() {
+        return usedAt != null;
+    }
 
     // --- Getter & Setter ---
     public Long getId() { return id; }
@@ -41,8 +62,11 @@ public class PasswordResetToken {
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
 
-    public LocalDateTime getExpiryDate() { return expiryDate; }
-    public void setExpiryDate(LocalDateTime expiryDate) { this.expiryDate = expiryDate; }
+    public LocalDateTime getExpiresAt() { return expiresAt; }
+    public void setExpiresAt(LocalDateTime expiresAt) { this.expiresAt = expiresAt; }
+
+    public LocalDateTime getUsedAt() { return usedAt; }
+    public void setUsedAt(LocalDateTime usedAt) { this.usedAt = usedAt; }
 
     public LocalDateTime getCreatedAt() { return createdAt; } 
 }

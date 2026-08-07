@@ -1,9 +1,14 @@
 package com.kartify.api.config;
 
+import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -12,14 +17,18 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
+import org.springframework.security.web.csrf.InvalidCsrfTokenException;
+import org.springframework.security.web.csrf.MissingCsrfTokenException;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import jakarta.servlet.http.HttpServletResponse;
+import tools.jackson.databind.ObjectMapper;
 
 @Configuration
 @EnableWebSecurity
@@ -67,11 +76,7 @@ public class SecurityConfig {
                 .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
             )
             .exceptionHandling(ex -> ex
-                .authenticationEntryPoint((request, response, authException) -> {
-                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                    response.setContentType("application/json");
-                    response.getWriter().write("{\"success\":false,\"message\":\"Unauthorized\"}");
-                })
+                .accessDeniedHandler(accessDeniedHandler())
             )
             .logout(logout -> logout
                 .logoutUrl("/api/logout")
@@ -81,12 +86,45 @@ public class SecurityConfig {
                 })
             )
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/register", "/api/authenticate", "/api/csrf-cookie", "/api/forgot-password").permitAll()
+                .requestMatchers(
+                    "/api/register", 
+                    "/api/authenticate", 
+                    "/api/csrf-cookie", 
+                    "/api/forgot-password",
+                    "/api/reset-password"
+                ).permitAll()
                 .requestMatchers("/api/products/**", "/api/categories/**").permitAll()
                 .anyRequest().authenticated()
             );
 
         return http.build();
+    }
+
+    @Bean
+    public AccessDeniedHandler accessDeniedHandler() {
+        return (request, response, ex) -> {
+
+            response.setStatus(HttpStatus.FORBIDDEN.value());
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+
+            Map<String, String> fieldErrors = new HashMap<>();
+
+            if (ex instanceof InvalidCsrfTokenException) {
+                fieldErrors.put("_csrf", "CSRF Token mismatch!.");
+            } else if (ex instanceof MissingCsrfTokenException) {
+                fieldErrors.put("_csrf", "Missing CSRF token. Please refresh the page and try again.");
+            } else {
+                fieldErrors.put("access", "Access denied.");
+            }
+
+            Map<String, Object> body = new HashMap<>();
+            body.put("timestamp", LocalDateTime.now());
+            body.put("status", HttpStatus.FORBIDDEN.value());
+            body.put("message", "Validation failed");
+            body.put("errors", fieldErrors);
+
+            new ObjectMapper().writeValue(response.getOutputStream(), body);
+        };
     }
 
 }

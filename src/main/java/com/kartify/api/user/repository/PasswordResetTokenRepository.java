@@ -11,6 +11,8 @@ import com.kartify.api.user.entity.PasswordResetToken;
 public interface PasswordResetTokenRepository extends JpaRepository<PasswordResetToken, Long> {
     
     Optional<PasswordResetToken> findByToken(String token);
+
+    Optional<PasswordResetToken> findByEmailAndToken(String email, String token);
     
     void deleteByEmail(String email);
 }
