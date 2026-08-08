@@ -5,9 +5,11 @@ import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.kartify.api.auth.dto.AuthResponse;
@@ -50,7 +52,7 @@ public class AuthController {
     }
 
     @PostMapping("/forgot-password")
-    public ResponseEntity<ApiResponse<String>> forgotPassword(@RequestBody Map<String, Object> request) throws MessagingException {
+    public ResponseEntity<ApiResponse<String>> forgotPassword(@RequestBody Map<String, Object> request) {
         String email = (String) request.get("email");
         String sendEmail = authService.forgotPassword(email);
         return ResponseEntity.ok(ApiResponse.success(sendEmail, null));
@@ -60,6 +62,15 @@ public class AuthController {
     public ResponseEntity<String> resetPasswordWithToken(@Valid @RequestBody PasswordResetRequest request){
         String passwordChanged = authService.resetPasswordWithToken(request);
         return ResponseEntity.ok(passwordChanged);
+    }
+
+    @PostMapping("/validate-reset-token")
+    public ResponseEntity<ApiResponse<String>> ValidatePasswordResetToken(@RequestBody Map<String, Object> request) {
+        System.out.println(request);
+        String email = (String) request.get("email");
+        String token = (String) request.get("token");
+        String validateResetToken = authService.validatePasswordResetToken(email, token);
+        return ResponseEntity.ok(ApiResponse.success(validateResetToken, null));
     }
 
     @GetMapping("/csrf-cookie")

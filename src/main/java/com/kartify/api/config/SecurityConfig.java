@@ -91,7 +91,8 @@ public class SecurityConfig {
                     "/api/authenticate", 
                     "/api/csrf-cookie", 
                     "/api/forgot-password",
-                    "/api/reset-password"
+                    "/api/reset-password",
+                    "/api/validate-reset-token"
                 ).permitAll()
                 .requestMatchers("/api/products/**", "/api/categories/**").permitAll()
                 .anyRequest().authenticated()

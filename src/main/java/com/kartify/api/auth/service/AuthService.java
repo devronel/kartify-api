@@ -28,8 +28,6 @@ import com.kartify.api.user.entity.UserDetail;
 import com.kartify.api.user.repository.PasswordResetTokenRepository;
 import com.kartify.api.user.repository.UserRepository;
 
-import jakarta.mail.MessagingException;
-
 @Service
 public class AuthService {
     
@@ -109,7 +107,7 @@ public class AuthService {
     }
 
     // --- Forgot Password ---
-    public String forgotPassword(String email) throws MessagingException
+    public String forgotPassword(String email)
     {
         User user = userRepository.findByEmail(email).orElseThrow(() ->
             new FieldValidationException("email", "Email not found.")
@@ -139,17 +137,16 @@ public class AuthService {
             htmlContent
         );
 
-        return "Password reset sent to your email.";
+        return "If an account with that email exists, a password reset link has been sent.";
     }
 
     // --- Change password ---
     @Transactional
     public String resetPasswordWithToken(PasswordResetRequest request){
 
-        // --- Check the email if have exisiting user ---
-        User user = userRepository.findByEmail(request.email()).orElseThrow(() ->
-            new FieldValidationException("email", "Email not found.")
-        );
+        if (!request.password().equals(request.confirmPassword())) {
+            throw new FieldValidationException("password", "Password do not match");
+        }
 
         // --- Check if the email and token exists ---
         PasswordResetToken resetToken = passwordResetTokenRepository.findByEmailAndToken(request.email(), request.token())
@@ -167,9 +164,10 @@ public class AuthService {
             throw new FieldValidationException("token", "Token already used.");
         }
 
-        if (!request.password().equals(request.confirmPassword())) {
-            throw new FieldValidationException("password", "Password do not match");
-        }
+        // --- Check the email if have exisiting user ---
+        User user = userRepository.findByEmail(request.email()).orElseThrow(() ->
+            new FieldValidationException("email", "Email not found.")
+        );
 
         // --- Hash the new password and save ---
         user.setPassword(passwordEncoder.encode(request.password()));
@@ -180,6 +178,24 @@ public class AuthService {
         passwordResetTokenRepository.save(resetToken);
 
         return "Password changed successfully";
+    }
+
+    // --- Validate Password Reset Token ---
+    public String validatePasswordResetToken(String email, String token){
+        PasswordResetToken resetToken = passwordResetTokenRepository.findByEmailAndToken(email, token)
+            .orElseThrow(() ->
+                new FieldValidationException("token", "Invalid token.")
+            );
+
+        if (resetToken.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new FieldValidationException("token", "Token has expired.");
+        }
+
+        if (resetToken.isUsed()) {
+            throw new FieldValidationException("token", "Token already used.");
+        }
+
+        return "Token is still available.";
     }
     
     private AuthResponse buildAuthResponse(User user){
