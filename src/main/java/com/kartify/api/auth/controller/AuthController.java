@@ -59,14 +59,13 @@ public class AuthController {
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity<String> resetPasswordWithToken(@Valid @RequestBody PasswordResetRequest request){
+    public ResponseEntity<ApiResponse<String>> resetPasswordWithToken(@Valid @RequestBody PasswordResetRequest request){
         String passwordChanged = authService.resetPasswordWithToken(request);
-        return ResponseEntity.ok(passwordChanged);
+        return ResponseEntity.ok(ApiResponse.success(passwordChanged, null));
     }
 
     @PostMapping("/validate-reset-token")
     public ResponseEntity<ApiResponse<String>> ValidatePasswordResetToken(@RequestBody Map<String, Object> request) {
-        System.out.println(request);
         String email = (String) request.get("email");
         String token = (String) request.get("token");
         String validateResetToken = authService.validatePasswordResetToken(email, token);

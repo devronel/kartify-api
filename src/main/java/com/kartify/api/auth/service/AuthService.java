@@ -3,6 +3,7 @@ package com.kartify.api.auth.service;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Base64;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -20,6 +21,7 @@ import com.kartify.api.auth.dto.LoginRequest;
 import com.kartify.api.auth.dto.PasswordResetRequest;
 import com.kartify.api.auth.dto.RegisterRequest;
 import com.kartify.api.exception.FieldValidationException;
+import com.kartify.api.exception.PasswordResetException;
 import com.kartify.api.security.CustomUserDetails;
 import com.kartify.api.service.EmailService;
 import com.kartify.api.user.entity.PasswordResetToken;
@@ -109,9 +111,12 @@ public class AuthService {
     // --- Forgot Password ---
     public String forgotPassword(String email)
     {
-        User user = userRepository.findByEmail(email).orElseThrow(() ->
-            new FieldValidationException("email", "Email not found.")
-        );
+        Optional<User> userCheck = userRepository.findByEmail(email);
+        if(userCheck.isEmpty()){
+            return "If an account with that email exists, a password reset link has been sent.";
+        }
+
+        User user = userCheck.get();
 
         SecureRandom random = new SecureRandom();
         byte[] bytes = new byte[32];
@@ -151,17 +156,17 @@ public class AuthService {
         // --- Check if the email and token exists ---
         PasswordResetToken resetToken = passwordResetTokenRepository.findByEmailAndToken(request.email(), request.token())
             .orElseThrow(() ->
-                new FieldValidationException("token", "Invalid token.")
+                new PasswordResetException("Invalid token.")
             );
 
         // --- Check if the token is aleady expired ---
         if (resetToken.getExpiresAt().isBefore(LocalDateTime.now())) {
-            throw new FieldValidationException("token", "Token has expired.");
+            throw new PasswordResetException("Token has expired.");
         }
 
         // --- Check if token is already used ---
         if (resetToken.isUsed()) {
-            throw new FieldValidationException("token", "Token already used.");
+            throw new PasswordResetException("Token already used.");
         }
 
         // --- Check the email if have exisiting user ---

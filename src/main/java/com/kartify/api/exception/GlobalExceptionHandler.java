@@ -68,4 +68,14 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.internalServerError().body(body);
     }
+
+    // --- Exception Handler for Invalid Token ---
+    @ExceptionHandler(PasswordResetException.class)
+    public ResponseEntity<Map<String, Object>> handlePasswordResetException(PasswordResetException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", HttpStatus.BAD_REQUEST.value());
+        body.put("message", ex.getMessage());
+        return ResponseEntity.badRequest().body(body);
+    }
 }
