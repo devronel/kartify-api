@@ -20,7 +20,6 @@ import com.kartify.api.auth.service.AuthService;
 import com.kartify.api.security.CustomUserDetails;
 import com.kartify.api.shared.dto.ApiResponse;
 
-import jakarta.mail.MessagingException;
 import jakarta.validation.Valid;
 
 @RestController

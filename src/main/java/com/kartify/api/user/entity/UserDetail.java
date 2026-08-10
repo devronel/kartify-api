@@ -3,9 +3,12 @@ package com.kartify.api.user.entity;
 import java.time.LocalDate;
 
 import com.kartify.api.shared.BaseEntity;
+import com.kartify.api.user.enums.Gender;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -37,12 +40,13 @@ public class UserDetail extends BaseEntity {
     @Column(name = "date_of_birth")
     private LocalDate dateOfBirth;
 
-    @Column(name = "gender", length = 6)
-    private String gender;
+    @Column(name = "gender")
+    @Enumerated(EnumType.STRING)
+    private Gender gender;
 
     // --- Constructor ---
     public UserDetail() {}
-    public UserDetail(User user, String firstName, String lastName, String phone, LocalDate dateOfBirth, String gender) {
+    public UserDetail(User user, String firstName, String lastName, String phone, LocalDate dateOfBirth, Gender gender) {
         this.user = user;
         this.firstName = firstName;
         this.lastName = lastName;
@@ -69,6 +73,6 @@ public class UserDetail extends BaseEntity {
     public LocalDate getDateOfBirth() { return dateOfBirth; }
     public void setDateOfBirth(LocalDate dateOfBirth) { this.dateOfBirth = dateOfBirth; }
 
-    public String getGender() { return gender; }
-    public void setGender(String gender) { this.gender = gender; }
+    public Gender getGender() { return gender; }
+    public void setGender(Gender gender) { this.gender = gender; }
 }
