@@ -1,5 +1,9 @@
 package com.kartify.api.account.controller;
 
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -13,8 +17,12 @@ import org.springframework.web.multipart.MultipartFile;
 import com.kartify.api.account.dto.ProfileRequest;
 import com.kartify.api.account.dto.ProfileResponse;
 import com.kartify.api.account.service.ProfileService;
+import com.kartify.api.contract.FileStorage;
 import com.kartify.api.security.CustomUserDetails;
+import com.kartify.api.shared.dto.UploadedFileResponse;
 
+import io.imagekit.models.files.FileUploadParams;
+import io.imagekit.models.files.FileUploadResponse;
 import jakarta.validation.Valid;
 
 @RestController
@@ -22,9 +30,11 @@ import jakarta.validation.Valid;
 public class ProfileController {
 
     protected final ProfileService profileService;
+    protected final FileStorage fileStorage;
 
-    public ProfileController(ProfileService profileService){
+    public ProfileController(ProfileService profileService, FileStorage fileStorage){
         this.profileService = profileService;
+        this.fileStorage = fileStorage;
     }
 
     @PostMapping("/profile")
@@ -34,15 +44,11 @@ public class ProfileController {
     }
 
     @PostMapping(value = "/profile-picture")
-    public ResponseEntity<String> uploadProfilePicture(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<UploadedFileResponse> uploadProfilePicture(@RequestParam("file") MultipartFile file) {
 
-        String fileName = file.getOriginalFilename();
-        Long fileSize = file.getSize();
+        UploadedFileResponse fileResponse = fileStorage.upload(file);
 
-        System.out.println("File: " + fileName);
-        System.out.println("Size: " + fileSize);
-
-        return ResponseEntity.ok("Okay");
+        return ResponseEntity.ok(fileResponse);
     }
 
 }
