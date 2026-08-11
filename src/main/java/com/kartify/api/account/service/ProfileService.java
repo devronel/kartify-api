@@ -17,6 +17,7 @@ public class ProfileService {
         this.userRepository = userRepository;
     }
 
+    // --- Create Or Update User Detail ---
     public ProfileResponse upsertProfile(Long userId, ProfileRequest payload)
     {
         User user = userRepository.findById(userId)
@@ -42,7 +43,7 @@ public class ProfileService {
             detail.getLastName(),
             detail.getPhone(),
             detail.getDateOfBirth(),
-            detail.getGender()
+            detail.getGender() 
         );
     }
 

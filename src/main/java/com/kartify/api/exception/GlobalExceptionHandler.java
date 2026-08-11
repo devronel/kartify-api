@@ -64,7 +64,8 @@ public class GlobalExceptionHandler {
         Map<String, Object> body = new HashMap<>();
         body.put("timestamp", LocalDateTime.now());
         body.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
-        body.put("message", "Something went wrong");
+        body.put("error", ex.getMessage());
+        body.put("trace", ex.toString());
 
         return ResponseEntity.internalServerError().body(body);
     }
