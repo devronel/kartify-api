@@ -53,16 +53,16 @@ public class UserAddress extends BaseEntity {
     @Column(name = "address_line_2")
     private String addressLine2;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 100)
     private String barangay;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 100)
     private String city;
 
-    @Column(length = 100)
+    @Column(nullable = false, length = 100)
     private String province;
 
-    @Column(length = 100)
+    @Column(nullable = false, length = 100)
     private String region;
 
     @Column(name = "postal_code", nullable = false, length = 10)
@@ -75,7 +75,7 @@ public class UserAddress extends BaseEntity {
     private Boolean isDefault = false;
 
     // --- Constructors ---
-    protected UserAddress() {}
+    public UserAddress() {}
     public UserAddress(
         User user, String label, UserAddressType type, String recipientName, 
         String phone, String addressLine1, String barangay, 

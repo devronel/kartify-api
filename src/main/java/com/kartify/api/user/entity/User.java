@@ -38,6 +38,13 @@ public class User extends BaseEntity {
     )
     private List<UserFile> files = new ArrayList<>();
 
+    @OneToMany(
+        mappedBy = "user",
+        cascade = CascadeType.ALL,
+        orphanRemoval = true
+    )
+    private List<UserAddress> addresses = new ArrayList<>();
+
     @Column(unique = true, nullable = false)
     private String email;
 
@@ -82,6 +89,12 @@ public class User extends BaseEntity {
     public void addFile(UserFile file) {
         files.add(file);
         file.setUser(this);
+    }
+
+    public List<UserAddress> getAddresses() { return addresses; }
+    public void addAddress(UserAddress address) {
+        addresses.add(address);
+        address.setUser(this);
     }
 
     public String getEmail() { return email; }
