@@ -51,7 +51,7 @@ public class UserFile extends BaseEntity {
     private FileType type;
 
     // --- Constructor ---
-    protected UserFile() {}
+    public UserFile() {}
     public UserFile(User user, String filename, String name, Long size, String extension, String mimeType, FileType type) {
         this.user = user;
         this.filename = filename;

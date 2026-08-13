@@ -7,7 +7,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.kartify.api.account.dto.ProfileRequest;
 import com.kartify.api.account.dto.ProfileResponse;
-import com.kartify.api.service.ImageKitService;
+import com.kartify.api.contract.FileStorage;
+import com.kartify.api.shared.dto.UploadedFileResponse;
 import com.kartify.api.user.entity.User;
 import com.kartify.api.user.entity.UserDetail;
 import com.kartify.api.user.entity.UserFile;
@@ -22,12 +23,12 @@ public class ProfileService {
 
     protected final UserRepository userRepository;
     protected final UserFileRepository userFileRepository;
-    protected final ImageKitService imageKitService;
+    protected final FileStorage fileStorage;
 
-    public ProfileService(UserRepository userRepository, UserFileRepository userFileRepository, ImageKitService imageKitService){
+    public ProfileService(UserRepository userRepository, UserFileRepository userFileRepository, FileStorage fileStorage){
         this.userRepository = userRepository;
         this.userFileRepository = userFileRepository;
-        this.imageKitService = imageKitService;
+        this.fileStorage = fileStorage;
     }
 
     // --- Create Or Update User Detail ---
@@ -62,22 +63,31 @@ public class ProfileService {
 
     // --- Upload profile picture ---
     @Transactional
-    public String uploadProfilePicture(Long userId, MultipartFile file){
-        
+    public UploadedFileResponse uploadProfilePicture(Long userId, MultipartFile file) {
+
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new RuntimeException("User not found"));
 
-        Optional<UserFile> existingProfile = userFileRepository.findByUserIdAndType(userId, FileType.PROFILE_PICTURE);
+        UserFile userFile = userFileRepository
+            .findByUserIdAndType(userId, FileType.PROFILE_PICTURE)
+            .orElseGet(() -> {
+                UserFile newFile = new UserFile();
+                newFile.setType(FileType.PROFILE_PICTURE);
+                user.addFile(newFile);
+                return newFile;
+            });
 
-        if (existingProfile.isPresent()) {
-            UserFile userFile = existingProfile.get();
-            userFileRepository.save(userFile);
-        } else {
-            // UserFile userFile = new UserFile();
-            // userFileRepository.save(userFile);
-        }
+        UploadedFileResponse fileResponse = fileStorage.upload(file, "/profile");
 
-        return "Profile URL";
+        userFile.setFilename(fileResponse.fileName());
+        userFile.setName(fileResponse.originalName());
+        userFile.setSize(fileResponse.size());
+        userFile.setExtension(fileResponse.extension());
+        userFile.setMimeType(fileResponse.mimeType());
+
+        userFileRepository.save(userFile);
+
+        return fileResponse;
     }
 
 }

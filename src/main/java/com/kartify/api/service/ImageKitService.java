@@ -28,8 +28,15 @@ public class ImageKitService implements FileStorage {
     }
 
     @Override
-    public UploadedFileResponse upload(MultipartFile file){
+    public UploadedFileResponse upload(MultipartFile file, String folder){
         try {
+
+            String defaultFolder = "/kartify";
+
+            if (folder != null && !folder.isBlank()) {
+                defaultFolder += "/" + folder;
+            }
+
             String originalName = file.getOriginalFilename();
             Long size = file.getSize();
             String mimeType = file.getContentType();
@@ -42,7 +49,7 @@ public class ImageKitService implements FileStorage {
             InputStream stream = file.getInputStream();
             FileUploadParams params = FileUploadParams.builder()
                 .file(stream)
-                .folder("/kartify/profile")
+                .folder(defaultFolder)
                 .fileName(fileName)
                 .useUniqueFileName(false)
                 .build();

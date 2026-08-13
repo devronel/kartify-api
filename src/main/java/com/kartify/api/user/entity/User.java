@@ -79,6 +79,10 @@ public class User extends BaseEntity {
     }
 
     public List<UserFile> getFiles() { return files; }
+    public void addFile(UserFile file) {
+        files.add(file);
+        file.setUser(this);
+    }
 
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }

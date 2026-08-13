@@ -1,10 +1,5 @@
 package com.kartify.api.account.controller;
 
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,8 +16,6 @@ import com.kartify.api.contract.FileStorage;
 import com.kartify.api.security.CustomUserDetails;
 import com.kartify.api.shared.dto.UploadedFileResponse;
 
-import io.imagekit.models.files.FileUploadParams;
-import io.imagekit.models.files.FileUploadResponse;
 import jakarta.validation.Valid;
 
 @RestController
@@ -44,10 +37,8 @@ public class ProfileController {
     }
 
     @PostMapping(value = "/profile-picture")
-    public ResponseEntity<UploadedFileResponse> uploadProfilePicture(@RequestParam("file") MultipartFile file) {
-
-        UploadedFileResponse fileResponse = fileStorage.upload(file);
-
+    public ResponseEntity<UploadedFileResponse> uploadProfilePicture(@AuthenticationPrincipal CustomUserDetails principal, @RequestParam("file") MultipartFile file) {
+        UploadedFileResponse fileResponse = profileService.uploadProfilePicture(principal.getUser().getId(), file);
         return ResponseEntity.ok(fileResponse);
     }
 
