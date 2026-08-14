@@ -1,5 +1,6 @@
 package com.kartify.api.user.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,6 +13,6 @@ public interface UserAddressRepository extends JpaRepository<UserAddress, Long> 
     
     Optional<UserAddress> findByUserIdAndIsDefaultTrue(Long userId);
 
-    Optional<UserAddress> findByUserId(Long userId);
+    List<UserAddress> findByUserId(Long userId);
     
 }

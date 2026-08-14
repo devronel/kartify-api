@@ -1,5 +1,7 @@
 package com.kartify.api.account.service;
 
+import java.util.List;
+
 import org.springframework.stereotype.Service;
 
 import com.kartify.api.account.dto.AddressRequest;
@@ -26,9 +28,9 @@ public class AddressService {
 
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-
+        
         UserAddress userAddress = new UserAddress();
-        user.addAddress(userAddress);
+        userAddress.setUser(user);
         userAddress.setLabel(payload.label());
         userAddress.setType(payload.type());
         userAddress.setRecipientName(payload.recipientName());
@@ -41,10 +43,10 @@ public class AddressService {
         userAddress.setRegion(payload.region());
         userAddress.setPostalCode(payload.postalCode());
         userAddress.setCountry(payload.country());
+        
+        List<UserAddress> existingAddresses = userAddressRepository.findByUserId(user.getId());
 
-        Boolean hasExistingAddresses = userAddressRepository.findByUserId(user.getId()).isEmpty();
-
-        if (!hasExistingAddresses) {
+        if (existingAddresses.isEmpty()) {
             userAddress.setIsDefault(true);
         } else if (Boolean.TRUE.equals(payload.isDefault())) {
             unsetCurrentDefault(user.getId());
@@ -56,14 +58,27 @@ public class AddressService {
         UserAddress userAddressCreated = userAddressRepository.save(userAddress);
 
         return new AddressResponse(
-            userAddressCreated.getType()
+            userAddressCreated.getLabel(),
+            userAddressCreated.getType(),
+            userAddressCreated.getRecipientName(),
+            userAddressCreated.getPhone(),
+            userAddressCreated.getAddressLine1(),
+            userAddressCreated.getAddressLine2(),
+            userAddressCreated.getBarangay(),
+            userAddressCreated.getCity(),
+            userAddressCreated.getProvince(),
+            userAddressCreated.getRegion(),
+            userAddressCreated.getPostalCode(),
+            userAddressCreated.getCountry(),
+            userAddressCreated.getIsDefault()
         );
 
     }
 
+
     private void unsetCurrentDefault(Long userId) {
         userAddressRepository.findByUserIdAndIsDefaultTrue(userId)
-            .ifPresent(current ->{
+            .ifPresent(current -> {
                 current.setIsDefault(false);
                 userAddressRepository.save(current);
             });

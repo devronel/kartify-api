@@ -14,6 +14,7 @@ import com.kartify.api.account.dto.ProfileResponse;
 import com.kartify.api.account.service.ProfileService;
 import com.kartify.api.contract.FileStorage;
 import com.kartify.api.security.CustomUserDetails;
+import com.kartify.api.shared.dto.ApiResponse;
 import com.kartify.api.shared.dto.UploadedFileResponse;
 
 import jakarta.validation.Valid;
@@ -31,15 +32,15 @@ public class ProfileController {
     }
 
     @PostMapping("/profile")
-    public ResponseEntity<ProfileResponse> updateProfile(@AuthenticationPrincipal CustomUserDetails principal, @Valid @RequestBody ProfileRequest request){
+    public ResponseEntity<ApiResponse<ProfileResponse>> updateProfile(@AuthenticationPrincipal CustomUserDetails principal, @Valid @RequestBody ProfileRequest request){
         ProfileResponse userProfile = profileService.upsertProfile(principal.getUser().getId(), request);
-        return ResponseEntity.ok(userProfile);
+        return ResponseEntity.ok(ApiResponse.success("Profile Updated Successfully", userProfile));
     }
 
     @PostMapping(value = "/profile-picture")
-    public ResponseEntity<UploadedFileResponse> uploadProfilePicture(@AuthenticationPrincipal CustomUserDetails principal, @RequestParam("file") MultipartFile file) {
+    public ResponseEntity<ApiResponse<UploadedFileResponse>> uploadProfilePicture(@AuthenticationPrincipal CustomUserDetails principal, @RequestParam("file") MultipartFile file) {
         UploadedFileResponse fileResponse = profileService.uploadProfilePicture(principal.getUser().getId(), file);
-        return ResponseEntity.ok(fileResponse);
+        return ResponseEntity.ok(ApiResponse.success("Profile Picture Uploaded Successfully", fileResponse));
     }
 
 }
