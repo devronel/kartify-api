@@ -8,6 +8,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.kartify.api.account.dto.ProfileRequest;
 import com.kartify.api.account.dto.ProfileResponse;
 import com.kartify.api.contract.FileStorage;
+import com.kartify.api.exception.ResourceNotFoundException;
 import com.kartify.api.shared.dto.UploadedFileResponse;
 import com.kartify.api.user.entity.User;
 import com.kartify.api.user.entity.UserDetail;
@@ -59,6 +60,24 @@ public class ProfileService {
             detail.getDateOfBirth(),
             detail.getGender() 
         );
+    }
+
+    // --- Get User Detail ---
+    public ProfileResponse getProfileInformation(Long userId){
+
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        UserDetail detail = user.getUserDetail();
+        
+        return new ProfileResponse(
+            detail.getFirstName(),
+            detail.getLastName(),
+            detail.getPhone(),
+            detail.getDateOfBirth(),
+            detail.getGender() 
+        );
+        
     }
 
     // --- Upload profile picture ---

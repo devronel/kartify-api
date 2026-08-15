@@ -2,6 +2,7 @@ package com.kartify.api.account.controller;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -29,6 +30,12 @@ public class ProfileController {
     public ProfileController(ProfileService profileService, FileStorage fileStorage){
         this.profileService = profileService;
         this.fileStorage = fileStorage;
+    }
+
+    @GetMapping("/profile")
+    public ResponseEntity<ApiResponse<ProfileResponse>> getProfileInformation(@AuthenticationPrincipal CustomUserDetails principal){
+        ProfileResponse userProfile = profileService.getProfileInformation(principal.getUser().getId());
+        return ResponseEntity.ok(ApiResponse.success("Profile Information", userProfile));
     }
 
     @PostMapping("/profile")
