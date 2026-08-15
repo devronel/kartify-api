@@ -2,6 +2,7 @@ package com.kartify.api.account.controller;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -45,6 +46,15 @@ public class AddressController {
     ){
         AddressResponse response = addressService.updateAddress(principal.getUser().getId(), id, request);
         return ResponseEntity.ok(ApiResponse.success("Address Update Successfully", response));
+    }
+
+    @PatchMapping("/{id}/default")
+    public ResponseEntity<ApiResponse<AddressResponse>> setDefaultAddress(
+        @AuthenticationPrincipal CustomUserDetails principal, 
+        @PathVariable Long id
+    ){
+        AddressResponse response = addressService.setDefaultAddress(principal.getUser().getId(), id);
+        return ResponseEntity.ok(ApiResponse.success("Default address is set successfully", response));
     }
 
 }

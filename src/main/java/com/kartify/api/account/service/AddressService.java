@@ -10,7 +10,6 @@ import com.kartify.api.account.dto.AddressUpdateRequest;
 import com.kartify.api.exception.ResourceNotFoundException;
 import com.kartify.api.user.entity.User;
 import com.kartify.api.user.entity.UserAddress;
-import com.kartify.api.user.enums.UserAddressType;
 import com.kartify.api.user.repository.UserAddressRepository;
 import com.kartify.api.user.repository.UserRepository;
 
@@ -85,10 +84,26 @@ public class AddressService {
         userAddress.setPostalCode(payload.postalCode());
         userAddress.setCountry(payload.country());
 
-        UserAddress userAddressCreated = userAddressRepository.save(userAddress);
+        UserAddress userAddressUpdated = userAddressRepository.save(userAddress);
 
-        return toResponse(userAddressCreated);
+        return toResponse(userAddressUpdated);
 
+    }
+
+    // --- Set Default Address ---
+    public AddressResponse setDefaultAddress(Long userId, Long addressId) {
+
+        userRepository.findById(userId)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        UserAddress address = userAddressRepository.findByIdAndUserId(addressId, userId)
+            .orElseThrow(() -> new ResourceNotFoundException("Address not found"));
+
+        unsetCurrentDefault(userId);
+        address.setIsDefault(true);
+
+        UserAddress userAddressUpdated = userAddressRepository.save(address);
+        return toResponse(userAddressUpdated);
     }
 
     // --- Unset the current default address ---
