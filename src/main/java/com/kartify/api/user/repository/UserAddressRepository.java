@@ -13,6 +13,8 @@ public interface UserAddressRepository extends JpaRepository<UserAddress, Long> 
     
     Optional<UserAddress> findByUserIdAndIsDefaultTrue(Long userId);
 
+    Optional<UserAddress> findByIdAndUserId(Long id, Long userId);
+
     List<UserAddress> findByUserId(Long userId);
     
 }

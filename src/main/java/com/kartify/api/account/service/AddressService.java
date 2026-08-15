@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 
 import com.kartify.api.account.dto.AddressRequest;
 import com.kartify.api.account.dto.AddressResponse;
+import com.kartify.api.account.dto.AddressUpdateRequest;
 import com.kartify.api.exception.ResourceNotFoundException;
 import com.kartify.api.user.entity.User;
 import com.kartify.api.user.entity.UserAddress;
@@ -24,6 +25,7 @@ public class AddressService {
         this.userAddressRepository = userAddressRepository;
     }
 
+    // --- Create Address ----
     public AddressResponse createAddress(Long userId, AddressRequest payload){
 
         User user = userRepository.findById(userId)
@@ -57,31 +59,64 @@ public class AddressService {
 
         UserAddress userAddressCreated = userAddressRepository.save(userAddress);
 
-        return new AddressResponse(
-            userAddressCreated.getLabel(),
-            userAddressCreated.getType(),
-            userAddressCreated.getRecipientName(),
-            userAddressCreated.getPhone(),
-            userAddressCreated.getAddressLine1(),
-            userAddressCreated.getAddressLine2(),
-            userAddressCreated.getBarangay(),
-            userAddressCreated.getCity(),
-            userAddressCreated.getProvince(),
-            userAddressCreated.getRegion(),
-            userAddressCreated.getPostalCode(),
-            userAddressCreated.getCountry(),
-            userAddressCreated.getIsDefault()
-        );
+        return toResponse(userAddressCreated);
 
     }
 
+    // --- Update Address ---
+    public AddressResponse updateAddress(Long userId, Long addressId, AddressUpdateRequest payload){
 
+        userRepository.findById(userId)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        UserAddress userAddress = userAddressRepository.findByIdAndUserId(addressId, userId)
+            .orElseThrow(() -> new ResourceNotFoundException("Address not found"));
+        
+        userAddress.setLabel(payload.label());
+        userAddress.setType(payload.type());
+        userAddress.setRecipientName(payload.recipientName());
+        userAddress.setPhone(payload.phone());
+        userAddress.setAddressLine1(payload.addressLine1());
+        userAddress.setAddressLine2(payload.addressLine2());
+        userAddress.setBarangay(payload.barangay());
+        userAddress.setCity(payload.city());
+        userAddress.setProvince(payload.province());
+        userAddress.setRegion(payload.region());
+        userAddress.setPostalCode(payload.postalCode());
+        userAddress.setCountry(payload.country());
+
+        UserAddress userAddressCreated = userAddressRepository.save(userAddress);
+
+        return toResponse(userAddressCreated);
+
+    }
+
+    // --- Unset the current default address ---
     private void unsetCurrentDefault(Long userId) {
         userAddressRepository.findByUserIdAndIsDefaultTrue(userId)
             .ifPresent(current -> {
                 current.setIsDefault(false);
                 userAddressRepository.save(current);
             });
+    }
+
+    // --- Map the response ---
+    private AddressResponse toResponse(UserAddress payload){
+        return new AddressResponse(
+            payload.getLabel(),
+            payload.getType(),
+            payload.getRecipientName(),
+            payload.getPhone(),
+            payload.getAddressLine1(),
+            payload.getAddressLine2(),
+            payload.getBarangay(),
+            payload.getCity(),
+            payload.getProvince(),
+            payload.getRegion(),
+            payload.getPostalCode(),
+            payload.getCountry(),
+            payload.getIsDefault()
+        );
     }
 
 }
