@@ -27,6 +27,10 @@ public class CustomUserDetails implements UserDetails {
         return List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole()));
     }
 
+    public Long getId(){
+        return user.getId();
+    }
+
     @Override
     public String getPassword() {
         return user.getPassword();

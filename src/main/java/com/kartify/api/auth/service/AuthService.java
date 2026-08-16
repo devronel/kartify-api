@@ -22,6 +22,7 @@ import com.kartify.api.auth.dto.PasswordResetRequest;
 import com.kartify.api.auth.dto.RegisterRequest;
 import com.kartify.api.exception.FieldValidationException;
 import com.kartify.api.exception.PasswordResetException;
+import com.kartify.api.exception.ResourceNotFoundException;
 import com.kartify.api.security.CustomUserDetails;
 import com.kartify.api.service.EmailService;
 import com.kartify.api.user.entity.PasswordResetToken;
@@ -104,7 +105,8 @@ public class AuthService {
 
     // --- Get authenticated user information ---
     public AuthResponse getUser(CustomUserDetails principal){
-        User user = principal.getUser();
+        User user = userRepository.findById(principal.getId())
+            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         return this.buildAuthResponse(user);
     }
 

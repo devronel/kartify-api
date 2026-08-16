@@ -14,7 +14,6 @@ import com.kartify.api.shared.dto.UploadedFileResponse;
 import io.imagekit.client.ImageKitClient;
 import io.imagekit.client.okhttp.ImageKitOkHttpClient;
 import io.imagekit.models.files.FileUploadParams;
-import io.imagekit.models.files.FileUploadResponse;
 
 @Service
 public class ImageKitService implements FileStorage {
