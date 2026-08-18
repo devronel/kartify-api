@@ -1,10 +1,10 @@
 package com.kartify.api.account.service;
 
-import java.util.Optional;
-
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.kartify.api.account.dto.ProfilePictureResponse;
 import com.kartify.api.account.dto.ProfileRequest;
 import com.kartify.api.account.dto.ProfileResponse;
 import com.kartify.api.contract.FileStorage;
@@ -21,6 +21,9 @@ import jakarta.transaction.Transactional;
 
 @Service
 public class ProfileService {
+
+    @Value("${imagekit.public-url}")
+    private String imagekitUrl;
 
     protected final UserRepository userRepository;
     protected final UserFileRepository userFileRepository;
@@ -82,7 +85,7 @@ public class ProfileService {
 
     // --- Upload profile picture ---
     @Transactional
-    public UploadedFileResponse uploadProfilePicture(Long userId, MultipartFile file) {
+    public ProfilePictureResponse uploadProfilePicture(Long userId, MultipartFile file) {
 
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new RuntimeException("User not found"));
@@ -106,7 +109,10 @@ public class ProfileService {
 
         userFileRepository.save(userFile);
 
-        return fileResponse;
+        return new ProfilePictureResponse(
+            imagekitUrl + "/profile/" + fileResponse.fileName(),
+            fileResponse
+        );
     }
 
 }

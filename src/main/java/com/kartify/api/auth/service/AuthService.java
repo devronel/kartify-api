@@ -28,13 +28,17 @@ import com.kartify.api.service.EmailService;
 import com.kartify.api.user.entity.PasswordResetToken;
 import com.kartify.api.user.entity.User;
 import com.kartify.api.user.entity.UserDetail;
+import com.kartify.api.user.entity.UserFile;
+import com.kartify.api.user.enums.FileType;
 import com.kartify.api.user.repository.PasswordResetTokenRepository;
+import com.kartify.api.user.repository.UserFileRepository;
 import com.kartify.api.user.repository.UserRepository;
 
 @Service
 public class AuthService {
     
     private final UserRepository userRepository;
+    private final UserFileRepository userFileRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
@@ -44,8 +48,12 @@ public class AuthService {
     @Value("${FRONTEND_URL}")
     private String frontendUrl;
 
+    @Value("${imagekit.public-url}")
+    private String imagekitUrl;
+
     public AuthService(
         UserRepository userRepository,
+        UserFileRepository userFileRepository,
         PasswordResetTokenRepository passwordResetTokenRepository,
         PasswordEncoder passwordEncoder,
         AuthenticationManager authenticationManager,
@@ -53,6 +61,7 @@ public class AuthService {
         EmailService emailService
     ){
         this.userRepository = userRepository;
+        this.userFileRepository = userFileRepository;
         this.passwordResetTokenRepository = passwordResetTokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
@@ -84,7 +93,10 @@ public class AuthService {
 
         User saved = userRepository.save(user);
 
-        return this.buildAuthResponse(saved);
+        UserFile profilePicture = userFileRepository.findByUserIdAndType(saved.getId(), FileType.PROFILE_PICTURE)
+            .orElse(null);
+
+        return this.buildAuthResponse(user, profilePicture);
     }
 
     // --- Login ---
@@ -100,14 +112,22 @@ public class AuthService {
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new IllegalStateException("User not found after authentication"));
 
-        return this.buildAuthResponse(user);
+        UserFile profilePicture = userFileRepository.findByUserIdAndType(user.getId(), FileType.PROFILE_PICTURE)
+            .orElse(null);
+
+        return this.buildAuthResponse(user, profilePicture);
     }
 
     // --- Get authenticated user information ---
     public AuthResponse getUser(CustomUserDetails principal){
+
         User user = userRepository.findById(principal.getId())
             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-        return this.buildAuthResponse(user);
+
+        UserFile profilePicture = userFileRepository.findByUserIdAndType(user.getId(), FileType.PROFILE_PICTURE)
+            .orElse(null);
+
+        return this.buildAuthResponse(user, profilePicture);
     }
 
     // --- Forgot Password ---
@@ -205,11 +225,17 @@ public class AuthService {
         return "Token is still available.";
     }
     
-    private AuthResponse buildAuthResponse(User user){
+    private AuthResponse buildAuthResponse(User user, UserFile profileImage){
+
+        String profileImageUrl = profileImage != null
+            ? imagekitUrl + "/profile/" + profileImage.getFilename()
+            : null;
+
         return new AuthResponse(
             user.getId(),
             user.getEmail(),
             user.getFullName(),
+            profileImageUrl,
             user.getRole()
         );
     }
