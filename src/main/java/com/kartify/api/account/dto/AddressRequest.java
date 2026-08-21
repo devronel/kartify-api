@@ -4,6 +4,7 @@ import com.kartify.api.user.enums.UserAddressType;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public record AddressRequest(
@@ -20,6 +21,10 @@ public record AddressRequest(
 
     @NotBlank(message = "Phone is required.") 
     @Size(max = 30) 
+    @Pattern(
+        regexp = "^(09|\\+639)\\d{9}$", 
+        message = "Invalid phone number. Use format 09XXXXXXXXX or +639XXXXXXXXX"
+    )
     String phone,
 
     @NotBlank(message = "Address line 1 is required.") 
