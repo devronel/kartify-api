@@ -24,6 +24,19 @@ public class AddressService {
         this.userAddressRepository = userAddressRepository;
     }
 
+    // --- Get All Address ---
+    public List<AddressResponse> getAddresses(Long userId){
+        
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        List<UserAddress> addresses = userAddressRepository.findByUserId(user.getId());
+
+        return addresses.stream()
+                .map(address -> toResponse(address))
+                .toList();
+    }
+
     // --- Create Address ----
     public AddressResponse createAddress(Long userId, AddressRequest payload){
 
@@ -118,6 +131,7 @@ public class AddressService {
     // --- Map the response ---
     private AddressResponse toResponse(UserAddress payload){
         return new AddressResponse(
+            payload.getId(),
             payload.getLabel(),
             payload.getType(),
             payload.getRecipientName(),
