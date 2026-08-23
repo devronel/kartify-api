@@ -38,6 +38,16 @@ public class AddressController {
         return ResponseEntity.ok(ApiResponse.success("Address List", userAddresses));
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<AddressResponse>> getAddress(
+        @AuthenticationPrincipal CustomUserDetails principal,
+        @PathVariable Long id
+    ){
+        AddressResponse userAddress = addressService.getAddress(principal.getId(), id);
+
+        return ResponseEntity.ok(ApiResponse.success("Edit Address Information", userAddress));
+    }
+
     @PostMapping
     public ResponseEntity<ApiResponse<AddressResponse>> createAddress(
         @AuthenticationPrincipal CustomUserDetails principal, 

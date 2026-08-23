@@ -37,6 +37,15 @@ public class AddressService {
                 .toList();
     }
 
+    // --- Get address by id ---
+    public AddressResponse getAddress(Long userId, Long id){
+    
+        UserAddress address = userAddressRepository.findByIdAndUserId(id, userId)
+            .orElseThrow(() -> new ResourceNotFoundException("Address not found"));
+
+        return toResponse(address);
+    }
+
     // --- Create Address ----
     public AddressResponse createAddress(Long userId, AddressRequest payload){
 
