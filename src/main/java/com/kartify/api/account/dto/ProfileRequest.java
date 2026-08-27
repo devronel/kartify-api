@@ -22,5 +22,5 @@ public record ProfileRequest(
     String phone,
 
     LocalDate dateOfBirth,
-    @NotNull Gender gender
+    @NotNull(message = "Gender is required") Gender gender
 ){}

@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -65,6 +66,15 @@ public class AddressController {
     ){
         AddressResponse response = addressService.updateAddress(principal.getUser().getId(), id, request);
         return ResponseEntity.ok(ApiResponse.success("Address Update Successfully", response));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<String>> deleteAddress(
+        @AuthenticationPrincipal CustomUserDetails principal, 
+        @PathVariable Long id
+    ){
+        String response = addressService.deleteAddress(principal.getUser().getId(), id);
+        return ResponseEntity.ok(ApiResponse.success("Address Deleted", response));
     }
 
     @PatchMapping("/{id}/default")

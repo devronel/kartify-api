@@ -112,6 +112,26 @@ public class AddressService {
 
     }
 
+    // --- Delete address ---
+    public String deleteAddress(Long userId, Long addressId){
+
+        UserAddress userAddress = userAddressRepository.findByIdAndUserId(addressId, userId)
+            .orElseThrow(() -> new ResourceNotFoundException("Address not found"));
+
+        // Check if the delete address is the default address
+        if(userAddress.getIsDefault()){
+            userAddressRepository.findFirstByUserIdAndIdNot(userId, addressId)
+                .ifPresent(address -> {
+                    address.setIsDefault(true);
+                    userAddressRepository.save(address);
+                });
+        }
+
+        userAddressRepository.delete(userAddress);
+
+        return "Address Deleted";
+    }
+
     // --- Set Default Address ---
     public AddressResponse setDefaultAddress(Long userId, Long addressId) {
 
