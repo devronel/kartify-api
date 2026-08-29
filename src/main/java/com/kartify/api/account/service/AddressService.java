@@ -118,7 +118,7 @@ public class AddressService {
         UserAddress userAddress = userAddressRepository.findByIdAndUserId(addressId, userId)
             .orElseThrow(() -> new ResourceNotFoundException("Address not found"));
 
-        // Check if the delete address is the default address
+        // --- Check if the delete address is the default address ---
         if(userAddress.getIsDefault()){
             userAddressRepository.findFirstByUserIdAndIdNot(userId, addressId)
                 .ifPresent(address -> {
