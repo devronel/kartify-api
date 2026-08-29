@@ -15,6 +15,22 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
 
     Optional<Category> findBySlug(String slug);
 
+    @Query("""
+        SELECT category FROM 
+        Category category 
+        WHERE category.parent IS NULL
+        ORDER BY category.sortOrder ASC
+    """)
+    List<Category> findAllTopLevel();
+
+    @Query("""
+        SELECT category FROM 
+        Category category 
+        WHERE category.parent.id = :parentId
+        ORDER BY category.sortOrder ASC
+    """)
+    List<Category> findAllChild(@Param("parentId") Long parentId);
+
     @Query("SELECT MAX(category.sortOrder) FROM Category category WHERE category.parent IS NULL")
     Integer findMaxSortOrderForTopLevel();
 

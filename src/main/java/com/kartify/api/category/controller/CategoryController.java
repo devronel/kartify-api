@@ -1,6 +1,9 @@
 package com.kartify.api.category.controller;
 
+import java.util.List;
+
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -41,6 +44,20 @@ public class CategoryController {
     ){
         CategoryResponse updatedCategory = categoryService.update(id, request);
         return ResponseEntity.ok(ApiResponse.success("Category Updated", updatedCategory));
+    }
+
+    // --- Get top level category ---
+    @GetMapping
+    public ResponseEntity<List<CategoryResponse>> getAllTopLevel() {
+        List<CategoryResponse> categories = categoryService.getTopLevelCategory();
+        return ResponseEntity.ok(categories);
+    }
+
+    // --- Get child category ---
+    @GetMapping("/{id}")
+    public ResponseEntity<List<CategoryResponse>> getChildCategory(@PathVariable Long id) {
+        List<CategoryResponse> categories = categoryService.getChildCategory(id);
+        return ResponseEntity.ok(categories);
     }
 
 }

@@ -1,5 +1,6 @@
 package com.kartify.api.category.service;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -122,6 +123,41 @@ public class CategoryService {
             createdCategory.getIsActive(),
             createdCategory.getSortOrder()
         );
+
+    }
+
+
+    // --- Find all top-level category ---
+    public List<CategoryResponse> getTopLevelCategory() {
+        return categoryRepository.findAllTopLevel().stream()
+            .map(category -> new CategoryResponse(
+                category.getId(),
+                null,
+                category.getName(),
+                category.getSlug(),
+                category.getDescription(),
+                category.getIsActive(),
+                category.getSortOrder()
+            )).toList();
+
+    }
+
+    // --- Find all child category ---
+    public List<CategoryResponse> getChildCategory(Long id) {
+
+        categoryRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Parent id not found"));
+
+        return categoryRepository.findAllChild(id).stream()
+            .map(category -> new CategoryResponse(
+                category.getId(),
+                category.getParent().getId(),
+                category.getName(),
+                category.getSlug(),
+                category.getDescription(),
+                category.getIsActive(),
+                category.getSortOrder()
+            )).toList();
 
     }
 
