@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.kartify.api.category.dto.CategoryCreateRequest;
 import com.kartify.api.category.dto.CategoryResponse;
+import com.kartify.api.category.dto.CategoryTreeResponse;
 import com.kartify.api.category.dto.CategoryUpdateRequest;
 import com.kartify.api.category.service.CategoryService;
 import com.kartify.api.shared.dto.ApiResponse;
@@ -48,8 +49,8 @@ public class CategoryController {
 
     // --- Get top level category ---
     @GetMapping
-    public ResponseEntity<List<CategoryResponse>> getAllTopLevel() {
-        List<CategoryResponse> categories = categoryService.getTopLevelCategory();
+    public ResponseEntity<List<CategoryTreeResponse>> getAllTopLevel() {
+        List<CategoryTreeResponse> categories = categoryService.getTopLevelCategory();
         return ResponseEntity.ok(categories);
     }
 

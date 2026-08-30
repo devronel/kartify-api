@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 
 import com.kartify.api.category.dto.CategoryCreateRequest;
 import com.kartify.api.category.dto.CategoryResponse;
+import com.kartify.api.category.dto.CategoryTreeResponse;
 import com.kartify.api.category.dto.CategoryUpdateRequest;
 import com.kartify.api.category.entity.Category;
 import com.kartify.api.category.repository.CategoryRepository;
@@ -128,18 +129,9 @@ public class CategoryService {
 
 
     // --- Find all top-level category ---
-    public List<CategoryResponse> getTopLevelCategory() {
-        return categoryRepository.findAllTopLevel().stream()
-            .map(category -> new CategoryResponse(
-                category.getId(),
-                null,
-                category.getName(),
-                category.getSlug(),
-                category.getDescription(),
-                category.getIsActive(),
-                category.getSortOrder()
-            )).toList();
-
+    public List<CategoryTreeResponse> getTopLevelCategory() {
+        return categoryRepository.findAllTopLevel()
+            .stream().map(this::toTreeResponse).toList();
     }
 
     // --- Find all child category ---
@@ -160,6 +152,22 @@ public class CategoryService {
             )).toList();
 
     }
+
+    // --- Create Tree category responsive using recursive ---
+    private CategoryTreeResponse toTreeResponse(Category category) {
+        List<CategoryTreeResponse> children = category.getChildren().stream()
+            .map(this::toTreeResponse)
+            .toList();
+
+        return new CategoryTreeResponse(
+            category.getId(),
+            category.getName(),
+            category.getSlug(),
+            category.getIsActive(),
+            0,
+            children
+        );
+    } 
 
     // --- Generate unique slug ---
     private String generateUniquesSlug(String name){
