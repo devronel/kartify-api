@@ -161,6 +161,7 @@ public class CategoryService {
 
         return new CategoryTreeResponse(
             category.getId(),
+            category.getParent() != null ? category.getParent().getId() : null,
             category.getName(),
             category.getSlug(),
             category.getIsActive(),
