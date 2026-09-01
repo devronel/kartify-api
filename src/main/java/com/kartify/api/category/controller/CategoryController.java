@@ -54,11 +54,11 @@ public class CategoryController {
         return ResponseEntity.ok(categories);
     }
 
-    // --- Get child category ---
+    // --- Get category by id ---
     @GetMapping("/{id}")
-    public ResponseEntity<List<CategoryResponse>> getChildCategory(@PathVariable Long id) {
-        List<CategoryResponse> categories = categoryService.getChildCategory(id);
-        return ResponseEntity.ok(categories);
+    public ResponseEntity<ApiResponse<CategoryResponse>> findCategory(@PathVariable Long id) {
+        CategoryResponse category = categoryService.findCategoryById(id);
+        return ResponseEntity.ok(ApiResponse.success("Fetch Category Success", category));
     }
 
 }

@@ -2,7 +2,7 @@ package com.kartify.api.category.dto;
 
 public record CategoryResponse(
     Long id,
-    Long parentId,
+    CategoryResponse parent,
     String name,
     String slug,
     String description,

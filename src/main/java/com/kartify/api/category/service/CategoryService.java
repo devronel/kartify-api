@@ -59,15 +59,7 @@ public class CategoryService {
 
         Long parentId = (createdCategory.getParent() != null) ? createdCategory.getParent().getId() : null;
 
-        return new CategoryResponse(
-            createdCategory.getId(),
-            parentId,
-            createdCategory.getName(),
-            createdCategory.getSlug(),
-            createdCategory.getDescription(),
-            createdCategory.getIsActive(),
-            createdCategory.getSortOrder()
-        );
+        return toResponse(createdCategory);
 
     }
 
@@ -115,42 +107,23 @@ public class CategoryService {
 
         Long parentId = (createdCategory.getParent() != null) ? createdCategory.getParent().getId() : null;
 
-        return new CategoryResponse(
-            createdCategory.getId(),
-            parentId,
-            createdCategory.getName(),
-            createdCategory.getSlug(),
-            createdCategory.getDescription(),
-            createdCategory.getIsActive(),
-            createdCategory.getSortOrder()
-        );
+        return toResponse(createdCategory);
 
     }
 
+    // --- Find category by id ---
+    public CategoryResponse findCategoryById(Long id){
+        
+        Category category = categoryRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
+
+        return toResponse(category);
+    }
 
     // --- Find all top-level category ---
     public List<CategoryTreeResponse> getTopLevelCategory() {
         return categoryRepository.findAllTopLevel()
             .stream().map(this::toTreeResponse).toList();
-    }
-
-    // --- Find all child category ---
-    public List<CategoryResponse> getChildCategory(Long id) {
-
-        categoryRepository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Parent id not found"));
-
-        return categoryRepository.findAllChild(id).stream()
-            .map(category -> new CategoryResponse(
-                category.getId(),
-                category.getParent().getId(),
-                category.getName(),
-                category.getSlug(),
-                category.getDescription(),
-                category.getIsActive(),
-                category.getSortOrder()
-            )).toList();
-
     }
 
     // --- Create Tree category responsive using recursive ---
@@ -169,6 +142,34 @@ public class CategoryService {
             children
         );
     } 
+
+    private CategoryResponse toResponse(Category category) {
+        CategoryResponse parent = category.getParent() != null
+            ? toParentResponse(category.getParent())
+            : null;
+
+        return new CategoryResponse(
+            category.getId(),
+            parent,
+            category.getName(),
+            category.getSlug(),
+            category.getDescription(),
+            category.getIsActive(),
+            category.getSortOrder()
+        );
+    }
+
+    private CategoryResponse toParentResponse(Category category) {
+        return new CategoryResponse(
+            category.getId(),
+            null,
+            category.getName(),
+            category.getSlug(),
+            category.getDescription(),
+            category.getIsActive(),
+            category.getSortOrder()
+        );
+    }
 
     // --- Generate unique slug ---
     private String generateUniquesSlug(String name){
