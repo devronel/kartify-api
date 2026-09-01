@@ -2,7 +2,6 @@ package com.kartify.api.category.service;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 
@@ -69,9 +68,20 @@ public class CategoryService {
         Category category = categoryRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Category not found."));
 
-        // --- Checked to prevent making the parent category itself ---
-        if (payload.parentId() != null && payload.parentId().equals(id)) {
-            throw new FieldValidationException("parentId", "A category cannot be its own parent.");
+        if (payload.parentId() != null) {
+
+            // --- Cannot be its own parent ---
+            if (payload.parentId().equals(id)) {
+                throw new FieldValidationException("parentId", "A category cannot be its own parent.");
+            }
+
+            // --- Cannot make an immediate child its parent ---
+            boolean isChild = category.getChildren().stream()
+                    .anyMatch(child -> child.getId().equals(payload.parentId()));
+
+            if (isChild) {
+                throw new FieldValidationException("parentId", "A category cannot have its child as its parent.");
+            }
         }
 
         Long oldParentId = category.getParent() != null ? category.getParent().getId() : null;
@@ -84,13 +94,16 @@ public class CategoryService {
                 .orElseThrow(() -> new ResourceNotFoundException("Parent category not found"));
             category.setParent(newParent);
         }
-
+        
+        if(!payload.name().equals(category.getName())){
+            category.setSlug(generateUniquesSlug(payload.name()));
+        }
         category.setName(payload.name());
-        category.setSlug(generateUniquesSlug(payload.name()));
         category.setDescription(payload.description());
         category.setIsActive(payload.isActive());
 
         
+        // --- Update the sort order if the data changes it parent category ---
         if (parentChanged) {
             Integer maxSortOrder;
             if (payload.parentId() == null) {
@@ -104,8 +117,6 @@ public class CategoryService {
         }
 
         Category createdCategory = categoryRepository.save(category);
-
-        Long parentId = (createdCategory.getParent() != null) ? createdCategory.getParent().getId() : null;
 
         return toResponse(createdCategory);
 
@@ -121,7 +132,7 @@ public class CategoryService {
     }
 
     // --- Find all top-level category ---
-    public List<CategoryTreeResponse> getTopLevelCategory() {
+    public List<CategoryTreeResponse> findTopLevelCategory() {
         return categoryRepository.findAllTopLevel()
             .stream().map(this::toTreeResponse).toList();
     }

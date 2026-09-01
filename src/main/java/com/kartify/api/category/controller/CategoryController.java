@@ -49,14 +49,14 @@ public class CategoryController {
 
     // --- Get top level category ---
     @GetMapping
-    public ResponseEntity<List<CategoryTreeResponse>> getAllTopLevel() {
-        List<CategoryTreeResponse> categories = categoryService.getTopLevelCategory();
+    public ResponseEntity<List<CategoryTreeResponse>> findTopLevelCategory() {
+        List<CategoryTreeResponse> categories = categoryService.findTopLevelCategory();
         return ResponseEntity.ok(categories);
     }
 
     // --- Get category by id ---
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<CategoryResponse>> findCategory(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<CategoryResponse>> findCategoryById(@PathVariable Long id) {
         CategoryResponse category = categoryService.findCategoryById(id);
         return ResponseEntity.ok(ApiResponse.success("Fetch Category Success", category));
     }
