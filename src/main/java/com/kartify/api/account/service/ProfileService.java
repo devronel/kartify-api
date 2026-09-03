@@ -2,6 +2,7 @@ package com.kartify.api.account.service;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.kartify.api.account.dto.ProfilePictureResponse;
@@ -16,8 +17,6 @@ import com.kartify.api.user.entity.UserFile;
 import com.kartify.api.user.enums.FileType;
 import com.kartify.api.user.repository.UserFileRepository;
 import com.kartify.api.user.repository.UserRepository;
-
-import jakarta.transaction.Transactional;
 
 @Service
 public class ProfileService {

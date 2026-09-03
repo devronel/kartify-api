@@ -1,6 +1,7 @@
 package com.kartify.api.product.service;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.kartify.api.category.entity.Category;
 import com.kartify.api.category.repository.CategoryRepository;
@@ -24,6 +25,7 @@ public class ProductService {
     }
 
     // --- Create Product ---
+    @Transactional
     public ProductResponse create(ProductCreateRequest payload){
         
         Category category = categoryRepository.findById(payload.categoryId())
