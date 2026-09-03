@@ -2,8 +2,8 @@ package com.kartify.api.product.entity;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Locale.Category;
 
+import com.kartify.api.category.entity.Category;
 import com.kartify.api.shared.BaseEntity;
 
 import jakarta.persistence.Column;
