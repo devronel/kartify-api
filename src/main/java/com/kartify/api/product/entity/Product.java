@@ -2,6 +2,7 @@ package com.kartify.api.product.entity;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 import com.kartify.api.category.entity.Category;
@@ -37,7 +38,7 @@ public class Product extends BaseEntity {
         cascade = CascadeType.ALL,
         orphanRemoval = true
     )
-    private List<ProductFile> files;
+    private List<ProductFile> files = new ArrayList<>();
 
     @Column(nullable = false)
     private String name;

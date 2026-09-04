@@ -1,16 +1,23 @@
 package com.kartify.api.product.service;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.kartify.api.category.entity.Category;
 import com.kartify.api.category.repository.CategoryRepository;
+import com.kartify.api.contract.FileStorage;
 import com.kartify.api.exception.FieldValidationException;
 import com.kartify.api.exception.ResourceNotFoundException;
 import com.kartify.api.product.dto.ProductCreateRequest;
 import com.kartify.api.product.dto.ProductResponse;
 import com.kartify.api.product.entity.Product;
+import com.kartify.api.product.entity.ProductFile;
 import com.kartify.api.product.repository.ProductRepository;
+import com.kartify.api.shared.dto.UploadedFileResponse;
 import com.kartify.api.shared.helper.SlugUtil;
 
 @Service
@@ -18,10 +25,16 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
+    private final FileStorage fileStorage;
 
-    public ProductService(ProductRepository productRepository, CategoryRepository categoryRepository){
+    public ProductService(
+        ProductRepository productRepository, 
+        CategoryRepository categoryRepository,
+        FileStorage fileStorage
+    ){
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
+        this.fileStorage = fileStorage;
     }
 
     // --- Create Product ---
@@ -53,15 +66,43 @@ public class ProductService {
         product.setIsActive(payload.isActive());
         product.setIsFeatured(payload.isFeatured());
 
+        // --- Upload product files ---
+        if(payload.images() != null && !payload.images().isEmpty()){
+
+            List<UploadedFileResponse> files = uploadFiles(payload.images());
+
+            for (UploadedFileResponse file : files) {
+
+                ProductFile productFile = new ProductFile();
+                productFile.setFilename(file.fileName());
+                productFile.setName(file.originalName());
+                productFile.setSize(file.size());
+                productFile.setExtension(file.extension());
+                productFile.setMimeType(file.mimeType());
+
+                product.addFile(productFile);
+
+            }
+        }
+
         Product productCreated = productRepository.save(product);
 
         return toResponse(productCreated);
     }
 
+    private List<UploadedFileResponse> uploadFiles(List<MultipartFile> files){
+        List<UploadedFileResponse> filesMetadata = new ArrayList<>();
+        for (MultipartFile file : files) {
+            UploadedFileResponse uploadedFile = fileStorage.upload(file, "/product");
+            filesMetadata.add(uploadedFile);
+        }
+        return filesMetadata;
+    }
+
 
     // --- Helper Function ---
 
-    public ProductResponse toResponse(Product product){
+    private ProductResponse toResponse(Product product){
         return new ProductResponse(
             product.getName(),
             product.getSlug(),

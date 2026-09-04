@@ -1,6 +1,9 @@
 package com.kartify.api.product.dto;
 
 import java.math.BigDecimal;
+import java.util.List;
+
+import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -27,7 +30,7 @@ public record ProductCreateRequest(
     @Size(max = 100, message = "Sku must not exceed 100 characters")
     String sku,
 
-    @NotBlank(message = "Price is required")
+    @NotNull(message = "Price is required")
     BigDecimal price,
 
     BigDecimal comparePrice,
@@ -42,5 +45,7 @@ public record ProductCreateRequest(
 
     Boolean isActive,
 
-    Boolean isFeatured
+    Boolean isFeatured,
+
+    List<MultipartFile> images
 ){}

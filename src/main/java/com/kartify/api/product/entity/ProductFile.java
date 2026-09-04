@@ -1,5 +1,7 @@
 package com.kartify.api.product.entity;
 
+import com.kartify.api.shared.BaseEntity;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -12,7 +14,7 @@ import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "product_files")
-public class ProductFile {
+public class ProductFile extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
