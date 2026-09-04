@@ -2,9 +2,15 @@ package com.kartify.api.service;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Primary;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
@@ -13,38 +19,33 @@ import org.springframework.web.multipart.MultipartFile;
 import com.kartify.api.contract.FileStorage;
 import com.kartify.api.shared.dto.UploadedFileResponse;
 
-import io.imagekit.client.ImageKitClient;
-import io.imagekit.client.okhttp.ImageKitOkHttpClient;
-import io.imagekit.models.files.FileUploadParams;
-
+@Primary
 @Service
-public class ImageKitService implements FileStorage {
+public class FileSystemStorageService implements FileStorage {
 
-    private final ImageKitClient client;
-    private final String imagekitUrl;
     private final String baseUrl;
+    private final Path root;
 
-    public ImageKitService(
-        @Value("${imagekit.private-key}") String privateKey,
-        @Value("${imagekit.public-url}") String imagekitUrl,
+    public FileSystemStorageService(
+        @Value("${app.storage.location}") String storageLocation,
         @Value("${app.base-url}") String baseUrl
     ){
-        this.client = ImageKitOkHttpClient.builder()
-            .privateKey(privateKey)
-            .build();
-        this.imagekitUrl = imagekitUrl;
+        this.root = Paths.get(storageLocation).toAbsolutePath().normalize();
         this.baseUrl = baseUrl;
+        try { Files.createDirectories(root); } catch (IOException e) { throw new RuntimeException(e); }
     }
 
     @Override
     public UploadedFileResponse upload(MultipartFile file, String folder){
         try {
 
-            String defaultFolder = "/kartify";
+            Path filePath = this.root;
 
             if (folder != null && !folder.isBlank()) {
-                defaultFolder += "/" + folder;
+                filePath = filePath.resolve(folder);
             }
+
+            Files.createDirectories(filePath);
 
             String originalName = file.getOriginalFilename();
             Long size = file.getSize();
@@ -55,15 +56,11 @@ public class ImageKitService implements FileStorage {
             }
             String fileName = UUID.randomUUID() + "." + extension;
 
-            InputStream stream = file.getInputStream();
-            FileUploadParams params = FileUploadParams.builder()
-                .file(stream)
-                .folder(defaultFolder)
-                .fileName(fileName)
-                .useUniqueFileName(false)
-                .build();
+            Path target = filePath.resolve(fileName).normalize();
 
-            client.files().upload(params);
+            InputStream fileStream = file.getInputStream();
+
+            Files.copy(fileStream, target, StandardCopyOption.REPLACE_EXISTING);
 
             return new UploadedFileResponse(
                 originalName,
@@ -72,18 +69,34 @@ public class ImageKitService implements FileStorage {
                 extension,
                 mimeType
             );
+            
         } catch(IOException ex){
             throw new RuntimeException("Failed to upload file", ex);
         }
     }
 
     @Override
-    public Resource loadAsResource(String path) {
+    public Resource loadAsResource(String filename) {
         try {
-            String url = imagekitUrl + "/" + path;
-            return new UrlResource(url);
+            Path file = root.resolve(filename).normalize();
+    
+            if (!file.startsWith(root.normalize())) {
+                throw new SecurityException("Invalid path");
+            }
+    
+            if (!Files.exists(file) || !Files.isRegularFile(file)) {
+                throw new NoSuchFileException(filename);
+            }
+    
+            Resource resource = new UrlResource(file.toUri());
+    
+            if (!resource.exists() || !resource.isReadable()) {
+                throw new IOException("File is not readable: " + filename);
+            }
+    
+            return resource;
         } catch (IOException ex) {
-            throw new RuntimeException("Failed to upload file", ex);
+            throw new RuntimeException("Failed to fetch file", ex);
         }
     }
 

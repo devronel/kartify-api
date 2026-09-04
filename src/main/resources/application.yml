@@ -31,3 +31,7 @@ imagekit:
   private-key: ${IMAGEKIT_PRIVATE_KEY}
   public-key: ${IMAGEKIT_PUBLIC_KEY}
   public-url: ${IMAGEKIT_URL}
+app:
+  base-url: http://localhost:8080
+  storage:
+    location: /var/www/kartify-api/uploads/kartify

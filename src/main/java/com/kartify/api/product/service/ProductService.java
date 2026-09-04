@@ -1,8 +1,10 @@
 package com.kartify.api.product.service;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -90,15 +92,21 @@ public class ProductService {
         return toResponse(productCreated);
     }
 
+    // --- Upload files to file storage ---
     private List<UploadedFileResponse> uploadFiles(List<MultipartFile> files){
         List<UploadedFileResponse> filesMetadata = new ArrayList<>();
         for (MultipartFile file : files) {
-            UploadedFileResponse uploadedFile = fileStorage.upload(file, "/product");
+            UploadedFileResponse uploadedFile = fileStorage.upload(file, "product");
             filesMetadata.add(uploadedFile);
         }
         return filesMetadata;
     }
 
+    // --- Get Product Image by Filename ---
+    public Resource getImageByFilename(String filename) throws IOException{
+        String productPath = "product/" + filename;
+        return fileStorage.loadAsResource(productPath);
+    }
 
     // --- Helper Function ---
 
