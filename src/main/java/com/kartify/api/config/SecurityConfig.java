@@ -94,7 +94,11 @@ public class SecurityConfig {
                     "/api/reset-password",
                     "/api/validate-reset-token"
                 ).permitAll()
-                .requestMatchers("/api/products/**", "/api/categories/**").permitAll()
+                .requestMatchers(
+                    "/api/products/**", 
+                    "/api/categories/**", 
+                    "/api/files/public/**"
+                ).permitAll()
                 .anyRequest().authenticated()
             );
 
