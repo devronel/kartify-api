@@ -40,6 +40,14 @@ public class Product extends BaseEntity {
     )
     private List<ProductFile> files = new ArrayList<>();
 
+    @OneToMany(
+        mappedBy = "product", 
+        fetch = FetchType.LAZY,
+        cascade = CascadeType.ALL,
+        orphanRemoval = true
+    )
+    private List<ProductVariant> variants = new ArrayList<>();
+
     @Column(nullable = false)
     private String name;
 
@@ -99,6 +107,12 @@ public class Product extends BaseEntity {
     public void removeFile(ProductFile file) {
         files.remove(file);
         file.setProduct(null);
+    }
+
+    public List<ProductVariant> getVariants(){ return variants; }
+    public void addVariant(ProductVariant variant) {
+        variants.add(variant);
+        variant.setProduct(this);
     }
 
     public String getName() { return name; }
