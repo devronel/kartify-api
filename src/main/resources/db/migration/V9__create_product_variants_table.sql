@@ -9,7 +9,7 @@ CREATE TABLE product_variants (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_product_variants_product FOREIGN KEY (product_id)
-        REFERENCES product (id) ON DELETE CASCADE
+        REFERENCES products (id) ON DELETE CASCADE
 );
 
 CREATE INDEX idx_product_variants_product_active ON product_variants(product_id, is_active);

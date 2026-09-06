@@ -1,5 +1,9 @@
 package com.kartify.api.product.entity;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+
 import com.kartify.api.shared.BaseEntity;
 
 import jakarta.persistence.Column;
@@ -9,6 +13,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
@@ -19,6 +24,9 @@ public class ProductAttributeValue extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @ManyToMany(mappedBy = "attributeValues")
+    private List<ProductVariant> productVariants = new ArrayList<>();
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "product_attribute_id", nullable = false)
@@ -32,6 +40,16 @@ public class ProductAttributeValue extends BaseEntity {
 
     // --- Getter & Setter ---
     public Long getId(){ return id; }
+
+    public List<ProductVariant> getProductVariants(){ return productVariants; }
+    public void addProductVariant(ProductVariant productVariant){
+        productVariants.add(productVariant);
+        productVariant.getAttributeValues().add(this);
+    }
+    public void removeProductVariant(ProductVariant productVariant){
+        productVariants.remove(productVariant);
+        productVariant.getAttributeValues().remove(this);
+    }
 
     public ProductAttribute getProductAttribute(){ return productAttribute; }
     public void setProductAttribute(ProductAttribute productAttribute){ this.productAttribute = productAttribute; }
