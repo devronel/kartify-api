@@ -12,6 +12,7 @@ spring:
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
   jpa:
+    database-platform: org.hibernate.dialect.${DB_DIALECT}
     hibernate:
       ddl-auto: validate
   flyway:
@@ -34,4 +35,4 @@ imagekit:
 app:
   base-url: http://localhost:8080
   storage:
-    location: /var/www/kartify-api/uploads/kartify
+    location: ${STORAGE_DIRECTORY}
