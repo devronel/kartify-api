@@ -5,10 +5,13 @@ import java.util.List;
 
 import org.springframework.web.multipart.MultipartFile;
 
+import com.kartify.api.product.validator.annotation.ValidProductVariant;
+
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
+@ValidProductVariant
 public record ProductCreateRequest(
 
     @NotNull(message = "Category is required")
@@ -47,5 +50,7 @@ public record ProductCreateRequest(
 
     Boolean isFeatured,
 
-    List<MultipartFile> images
+    List<MultipartFile> images,
+
+    List<ProductVariantRequest> variants
 ){}

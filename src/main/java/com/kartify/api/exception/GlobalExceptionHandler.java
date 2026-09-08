@@ -7,19 +7,29 @@ import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
+import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    
     // --- Handles @Valid failures (e.g. missing firstName, invalid email) ---
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidationErrors(MethodArgumentNotValidException ex) {
+        
         Map<String, String> fieldErrors = new HashMap<>();
-
-        for (FieldError error : ex.getBindingResult().getFieldErrors()) {
-            fieldErrors.put(error.getField(), error.getDefaultMessage());
+        for (ObjectError error : ex.getBindingResult().getAllErrors()) {
+            if (error instanceof FieldError fieldError) {
+                fieldErrors.put(fieldError.getField(), error.getDefaultMessage());
+            } else {
+                if("productCreateRequest".equals(error.getObjectName())){
+                    fieldErrors.put("variants", error.getDefaultMessage());
+                }else{
+                    fieldErrors.put(error.getObjectName(), error.getDefaultMessage());
+                }
+            }
         }
 
         Map<String, Object> body = new HashMap<>();
