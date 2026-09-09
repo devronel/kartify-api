@@ -16,9 +16,14 @@ import com.kartify.api.exception.FieldValidationException;
 import com.kartify.api.exception.ResourceNotFoundException;
 import com.kartify.api.product.dto.ProductCreateRequest;
 import com.kartify.api.product.dto.ProductResponse;
+import com.kartify.api.product.dto.ProductVariantRequest;
 import com.kartify.api.product.entity.Product;
+import com.kartify.api.product.entity.ProductAttributeValue;
 import com.kartify.api.product.entity.ProductFile;
+import com.kartify.api.product.entity.ProductVariant;
+import com.kartify.api.product.repository.ProductAttributeValueRepository;
 import com.kartify.api.product.repository.ProductRepository;
+import com.kartify.api.product.repository.ProductVariantRepository;
 import com.kartify.api.shared.dto.UploadedFileResponse;
 import com.kartify.api.shared.helper.SlugUtil;
 
@@ -26,15 +31,21 @@ import com.kartify.api.shared.helper.SlugUtil;
 public class ProductService {
 
     private final ProductRepository productRepository;
+    private final ProductVariantRepository productVariantRepository;
+    private final ProductAttributeValueRepository productAttributeValueRepository;
     private final CategoryRepository categoryRepository;
     private final FileStorage fileStorage;
 
     public ProductService(
         ProductRepository productRepository, 
+        ProductVariantRepository productVariantRepository,
+        ProductAttributeValueRepository productAttributeValueRepository,
         CategoryRepository categoryRepository,
         FileStorage fileStorage
     ){
         this.productRepository = productRepository;
+        this.productVariantRepository = productVariantRepository;
+        this.productAttributeValueRepository = productAttributeValueRepository;
         this.categoryRepository = categoryRepository;
         this.fileStorage = fileStorage;
     }
@@ -87,9 +98,51 @@ public class ProductService {
             }
         }
 
+        // --- Save product variant ---
+        if(Boolean.TRUE.equals(payload.hasVariants()) && payload.variants() != null && !payload.variants().isEmpty()){
+            int index = 0;
+            for (ProductVariantRequest productVariant : payload.variants()) {
+                ProductVariant variant = this.createVariant(product, productVariant, index);
+                product.addVariant(variant);
+                index++;
+            }
+        }
+
         Product productCreated = productRepository.save(product);
 
         return toResponse(productCreated);
+    }
+
+    // --- Create product variant ---
+    private ProductVariant createVariant(Product product, ProductVariantRequest payload, int index){
+
+        // --- Check if product with same sku already exist ---
+        if(productVariantRepository.existsBySku(payload.sku())){
+            throw new FieldValidationException("variants[" + index + "].sku", "SKU is already exists.");
+        }
+
+        ProductVariant productVariant = new ProductVariant();
+        productVariant.setProduct(product);
+        productVariant.setSku(payload.sku());
+        productVariant.setPrice(payload.price());
+        productVariant.setStockQuantity(payload.stockQuantity());
+        productVariant.setIsActive(payload.isActive());
+
+        // Batch fetch attribute values to avoid N+1 queries
+        if (payload.attributeValueIds() != null && !payload.attributeValueIds().isEmpty()) {
+            List<ProductAttributeValue> attributeValues = productAttributeValueRepository.findAllById(payload.attributeValueIds());
+            
+            if (attributeValues.size() != payload.attributeValueIds().size()) {
+                throw new ResourceNotFoundException("One or more attribute values were not found.");
+            }
+
+            for (ProductAttributeValue attributeValue : attributeValues) {
+                productVariant.addVariantAttributeValue(attributeValue);
+            }
+        }
+
+        return productVariant;
+
     }
 
     // --- Upload files to file storage ---

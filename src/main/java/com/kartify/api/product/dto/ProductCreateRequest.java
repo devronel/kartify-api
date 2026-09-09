@@ -7,6 +7,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.kartify.api.product.validator.annotation.ValidProductVariant;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -29,7 +30,7 @@ public record ProductCreateRequest(
     @Size(max = 255, message = "Short description must not exceed 255 characters")
     String shortDescription,
 
-    @NotBlank(message = "Sku is required")
+    @NotBlank(message = "SKU is required")
     @Size(max = 100, message = "Sku must not exceed 100 characters")
     String sku,
 
@@ -52,5 +53,5 @@ public record ProductCreateRequest(
 
     List<MultipartFile> images,
 
-    List<ProductVariantRequest> variants
+    List<@Valid ProductVariantRequest> variants
 ){}
