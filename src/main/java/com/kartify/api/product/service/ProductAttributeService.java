@@ -1,5 +1,7 @@
 package com.kartify.api.product.service;
 
+import java.util.List;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -8,6 +10,7 @@ import com.kartify.api.product.dto.ProductAttributeRequest;
 import com.kartify.api.product.dto.ProductAttributeResponse;
 import com.kartify.api.product.dto.ProductAttributeValueRequest;
 import com.kartify.api.product.dto.ProductAttributeValueResponse;
+import com.kartify.api.product.dto.ProductAttributeWithValueResponse;
 import com.kartify.api.product.entity.ProductAttribute;
 import com.kartify.api.product.entity.ProductAttributeValue;
 import com.kartify.api.product.repository.ProductAttributeRepository;
@@ -61,6 +64,26 @@ public class ProductAttributeService {
             savedAttributeValue.getValue()
         );
 
+    }
+
+    // --- Get all the arribute with values
+    public List<ProductAttributeWithValueResponse> findAllAttributesWithValues(){
+
+        List<ProductAttribute> productAttributes = productAttributeRepository.findAll();
+
+        return productAttributes.stream()
+            .map(attribute -> new ProductAttributeWithValueResponse(
+                    attribute.getId(),
+                    attribute.getName(),
+                    attribute.getAttributeValues().stream()
+                            .map(value -> new ProductAttributeValueResponse(
+                                    value.getId(),
+                                    value.getProductAttribute().getId(),
+                                    value.getValue()
+                            ))
+                            .toList()
+            ))
+            .toList();
     }
 
 }

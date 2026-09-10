@@ -30,7 +30,6 @@ public record ProductCreateRequest(
     @Size(max = 255, message = "Short description must not exceed 255 characters")
     String shortDescription,
 
-    @NotBlank(message = "SKU is required")
     @Size(max = 100, message = "Sku must not exceed 100 characters")
     String sku,
 

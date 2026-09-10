@@ -1,6 +1,9 @@
 package com.kartify.api.product.controller;
 
+import java.util.List;
+
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -10,6 +13,7 @@ import com.kartify.api.product.dto.ProductAttributeRequest;
 import com.kartify.api.product.dto.ProductAttributeResponse;
 import com.kartify.api.product.dto.ProductAttributeValueRequest;
 import com.kartify.api.product.dto.ProductAttributeValueResponse;
+import com.kartify.api.product.dto.ProductAttributeWithValueResponse;
 import com.kartify.api.product.service.ProductAttributeService;
 import com.kartify.api.shared.dto.ApiResponse;
 
@@ -41,6 +45,13 @@ public class ProductAttributeController {
     ){
         ProductAttributeValueResponse attributeValueResponse = productAttributeService.createAttributeValue(request);
         return ResponseEntity.ok(ApiResponse.success("Product Variant Attribute Value Created", attributeValueResponse));
+    }
+
+    // --- Get all attribute with values ---
+    @GetMapping
+    public ResponseEntity<List<ProductAttributeWithValueResponse>> findAllAttributesWithValues(){
+        List<ProductAttributeWithValueResponse> productAttributeWithValues = productAttributeService.findAllAttributesWithValues();
+        return ResponseEntity.ok(productAttributeWithValues);
     }
 
 }

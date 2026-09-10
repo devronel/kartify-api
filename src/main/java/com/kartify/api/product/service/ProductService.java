@@ -57,8 +57,13 @@ public class ProductService {
         Category category = categoryRepository.findById(payload.categoryId())
             .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
 
-        // --- Check if product with same sku already exist ---
-        if(productRepository.existsBySku(payload.sku())){
+        // --- If no variants, SKU is required ---
+        if (Boolean.FALSE.equals(payload.hasVariants()) && (payload.sku() == null || payload.sku().isBlank())) {
+            throw new FieldValidationException("sku", "SKU is required.");
+        }
+
+        // --- Check for duplicate SKU, only if one was provided ---
+        if (payload.sku() != null && !payload.sku().isBlank() && productRepository.existsBySku(payload.sku())) {
             throw new FieldValidationException("sku", "SKU is already exists.");
         }
 
