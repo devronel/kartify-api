@@ -39,6 +39,9 @@ public class ProductFile extends BaseEntity {
     @Column(name = "mime_type", nullable = false)
     private String mimeType;
 
+    @Column(name = "is_primary", nullable = false)
+    private Boolean isPrimary = false;
+
     // --- Constructor ---
     public ProductFile() {}
     public ProductFile(Product product, String filename, String name, Long size, String extension, String mimeType) {
@@ -70,5 +73,8 @@ public class ProductFile extends BaseEntity {
 
     public String getMimeType() { return mimeType; }
     public void setMimeType(String mimeType) { this.mimeType = mimeType; }
+
+    public Boolean getIsPrimary() { return isPrimary; }
+    public void setIsPrimary(Boolean isPrimary) { this.isPrimary = isPrimary; }
 
 }

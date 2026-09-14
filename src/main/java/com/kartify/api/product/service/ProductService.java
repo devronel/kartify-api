@@ -1,6 +1,7 @@
 package com.kartify.api.product.service;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -15,6 +16,7 @@ import com.kartify.api.contract.FileStorage;
 import com.kartify.api.exception.FieldValidationException;
 import com.kartify.api.exception.ResourceNotFoundException;
 import com.kartify.api.product.dto.ProductCreateRequest;
+import com.kartify.api.product.dto.ProductFileRequest;
 import com.kartify.api.product.dto.ProductResponse;
 import com.kartify.api.product.dto.ProductVariantRequest;
 import com.kartify.api.product.entity.Product;
@@ -57,13 +59,8 @@ public class ProductService {
         Category category = categoryRepository.findById(payload.categoryId())
             .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
 
-        // --- If no variants, SKU is required ---
-        if (Boolean.FALSE.equals(payload.hasVariants()) && (payload.sku() == null || payload.sku().isBlank())) {
-            throw new FieldValidationException("sku", "SKU is required.");
-        }
-
         // --- Check for duplicate SKU, only if one was provided ---
-        if (payload.sku() != null && !payload.sku().isBlank() && productRepository.existsBySku(payload.sku())) {
+        if (productRepository.existsBySku(payload.sku())) {
             throw new FieldValidationException("sku", "SKU is already exists.");
         }
 
@@ -74,20 +71,33 @@ public class ProductService {
         product.setSlug(resolveSlug(payload.slug(), payload.name()));
         product.setDescription(payload.description());
         product.setShortDescription(payload.shortDescription());
-        product.setSku(payload.sku());
+
+        if(payload.sku() != null && !payload.sku().isBlank()){
+            product.setSku(payload.sku());
+        }
+
         product.setPrice(payload.price());
-        product.setComparePrice(payload.comparePrice());
-        product.setCostPrice(payload.costPrice());
-        product.setHasVariants(payload.hasVariants());
+
+        BigDecimal comparePrice = payload.comparePrice();
+        if (comparePrice != null && comparePrice.compareTo(BigDecimal.ZERO) > 0) {
+            product.setComparePrice(comparePrice);
+        }
+
+        BigDecimal costPrice = payload.costPrice();
+        if (costPrice != null && costPrice.compareTo(BigDecimal.ZERO) > 0) {
+            product.setCostPrice(costPrice);
+        }
+
+        product.setHasVariants(payload.hasVariant());
         product.setStockQuantity(payload.stockQuantity());
         product.setWeight(payload.weight());
         product.setIsActive(payload.isActive());
         product.setIsFeatured(payload.isFeatured());
 
         // --- Upload product files ---
-        if(payload.images() != null && !payload.images().isEmpty()){
+        if(payload.files() != null && !payload.files().isEmpty()){
 
-            List<UploadedFileResponse> files = uploadFiles(payload.images());
+            List<UploadedFileResponse> files = uploadFiles(payload.files());
 
             for (UploadedFileResponse file : files) {
 
@@ -104,7 +114,7 @@ public class ProductService {
         }
 
         // --- Save product variant ---
-        if(Boolean.TRUE.equals(payload.hasVariants()) && payload.variants() != null && !payload.variants().isEmpty()){
+        if(Boolean.TRUE.equals(payload.hasVariant()) && payload.variants() != null && !payload.variants().isEmpty()){
             int index = 0;
             for (ProductVariantRequest productVariant : payload.variants()) {
                 ProductVariant variant = this.createVariant(product, productVariant, index);
@@ -130,7 +140,10 @@ public class ProductService {
         productVariant.setProduct(product);
         productVariant.setSku(payload.sku());
         productVariant.setPrice(payload.price());
+        productVariant.setComparePrice(payload.comparePrice());
+        productVariant.setCostPrice(payload.costPrice());
         productVariant.setStockQuantity(payload.stockQuantity());
+        productVariant.setWeight(payload.weight());
         productVariant.setIsActive(payload.isActive());
 
         // Batch fetch attribute values to avoid N+1 queries
@@ -151,10 +164,10 @@ public class ProductService {
     }
 
     // --- Upload files to file storage ---
-    private List<UploadedFileResponse> uploadFiles(List<MultipartFile> files){
+    private List<UploadedFileResponse> uploadFiles(List<ProductFileRequest> files){
         List<UploadedFileResponse> filesMetadata = new ArrayList<>();
-        for (MultipartFile file : files) {
-            UploadedFileResponse uploadedFile = fileStorage.upload(file, "product");
+        for (ProductFileRequest file : files) {
+            UploadedFileResponse uploadedFile = fileStorage.upload(file.file(), "product");
             filesMetadata.add(uploadedFile);
         }
         return filesMetadata;

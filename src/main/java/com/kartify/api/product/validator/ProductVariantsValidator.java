@@ -16,7 +16,7 @@ public class ProductVariantsValidator implements ConstraintValidator<ValidProduc
         }
 
         // Only require variants when hasVariants is explicitly true
-        if (!Boolean.TRUE.equals(request.hasVariants())) {
+        if (!Boolean.TRUE.equals(request.hasVariant())) {
             return true;
         }
 

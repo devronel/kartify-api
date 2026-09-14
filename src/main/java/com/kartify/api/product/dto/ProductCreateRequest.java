@@ -40,7 +40,7 @@ public record ProductCreateRequest(
 
     BigDecimal costPrice,
 
-    Boolean hasVariants,
+    Boolean hasVariant,
 
     Integer stockQuantity,
 
@@ -50,7 +50,7 @@ public record ProductCreateRequest(
 
     Boolean isFeatured,
 
-    List<MultipartFile> images,
+    List<ProductFileRequest> files,
 
     List<@Valid ProductVariantRequest> variants
 ){}
