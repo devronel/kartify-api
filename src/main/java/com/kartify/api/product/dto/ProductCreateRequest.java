@@ -3,8 +3,6 @@ package com.kartify.api.product.dto;
 import java.math.BigDecimal;
 import java.util.List;
 
-import org.springframework.web.multipart.MultipartFile;
-
 import com.kartify.api.product.validator.annotation.ValidProductVariant;
 
 import jakarta.validation.Valid;

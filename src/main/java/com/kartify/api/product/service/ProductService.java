@@ -17,6 +17,7 @@ import com.kartify.api.exception.FieldValidationException;
 import com.kartify.api.exception.ResourceNotFoundException;
 import com.kartify.api.product.dto.ProductCreateRequest;
 import com.kartify.api.product.dto.ProductFileRequest;
+import com.kartify.api.product.dto.ProductFileResponse;
 import com.kartify.api.product.dto.ProductResponse;
 import com.kartify.api.product.dto.ProductVariantRequest;
 import com.kartify.api.product.entity.Product;
@@ -69,8 +70,14 @@ public class ProductService {
         product.setCategory(category);
         product.setName(payload.name());
         product.setSlug(resolveSlug(payload.slug(), payload.name()));
-        product.setDescription(payload.description());
-        product.setShortDescription(payload.shortDescription());
+        
+        if(payload.description() != null && !payload.description().isBlank()){
+            product.setDescription(payload.description());
+        }
+
+        if(payload.shortDescription() != null && !payload.shortDescription().isBlank()){
+            product.setShortDescription(payload.shortDescription());
+        }
 
         if(payload.sku() != null && !payload.sku().isBlank()){
             product.setSku(payload.sku());
@@ -97,16 +104,19 @@ public class ProductService {
         // --- Upload product files ---
         if(payload.files() != null && !payload.files().isEmpty()){
 
-            List<UploadedFileResponse> files = uploadFiles(payload.files());
+            List<ProductFileResponse> files = uploadFiles(payload.files());
 
-            for (UploadedFileResponse file : files) {
+            for (ProductFileResponse file : files) {
+
+                UploadedFileResponse metadata = file.file();
 
                 ProductFile productFile = new ProductFile();
-                productFile.setFilename(file.fileName());
-                productFile.setName(file.originalName());
-                productFile.setSize(file.size());
-                productFile.setExtension(file.extension());
-                productFile.setMimeType(file.mimeType());
+                productFile.setFilename(metadata.fileName());
+                productFile.setName(metadata.originalName());
+                productFile.setSize(metadata.size());
+                productFile.setExtension(metadata.extension());
+                productFile.setMimeType(metadata.mimeType());
+                productFile.setIsPrimary(file.isPrimary());
 
                 product.addFile(productFile);
 
@@ -137,13 +147,26 @@ public class ProductService {
         }
 
         ProductVariant productVariant = new ProductVariant();
+        
         productVariant.setProduct(product);
-        productVariant.setSku(payload.sku());
+
+        if(payload.sku() != null && !payload.sku().isBlank()){
+            productVariant.setSku(payload.sku());
+        }
+
         productVariant.setPrice(payload.price());
-        productVariant.setComparePrice(payload.comparePrice());
-        productVariant.setCostPrice(payload.costPrice());
+
+        BigDecimal comparePrice = payload.comparePrice();
+        if (comparePrice != null && comparePrice.compareTo(BigDecimal.ZERO) > 0) {
+            productVariant.setComparePrice(comparePrice);
+        }
+
+        BigDecimal costPrice = payload.costPrice();
+        if (costPrice != null && costPrice.compareTo(BigDecimal.ZERO) > 0) {
+            productVariant.setCostPrice(costPrice);
+        }
+
         productVariant.setStockQuantity(payload.stockQuantity());
-        productVariant.setWeight(payload.weight());
         productVariant.setIsActive(payload.isActive());
 
         // Batch fetch attribute values to avoid N+1 queries
@@ -164,12 +187,17 @@ public class ProductService {
     }
 
     // --- Upload files to file storage ---
-    private List<UploadedFileResponse> uploadFiles(List<ProductFileRequest> files){
-        List<UploadedFileResponse> filesMetadata = new ArrayList<>();
+    private List<ProductFileResponse> uploadFiles(List<ProductFileRequest> files){
+        List<ProductFileResponse> filesMetadata = new ArrayList<>();
+        
         for (ProductFileRequest file : files) {
             UploadedFileResponse uploadedFile = fileStorage.upload(file.file(), "product");
-            filesMetadata.add(uploadedFile);
+            filesMetadata.add(new ProductFileResponse(
+                uploadedFile,
+                file.isPrimary()
+            ));
         }
+
         return filesMetadata;
     }
 

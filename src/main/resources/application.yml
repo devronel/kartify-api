@@ -28,6 +28,9 @@ spring:
           auth: true
           starttls:
             enable: true
+  servlet:
+    multipart: 
+      max-file-size: 5MB
 imagekit:
   private-key: ${IMAGEKIT_PRIVATE_KEY}
   public-key: ${IMAGEKIT_PUBLIC_KEY}
