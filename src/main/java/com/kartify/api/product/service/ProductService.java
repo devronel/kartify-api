@@ -4,18 +4,23 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.core.io.Resource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
 import com.kartify.api.category.entity.Category;
 import com.kartify.api.category.repository.CategoryRepository;
 import com.kartify.api.contract.FileStorage;
 import com.kartify.api.exception.FieldValidationException;
 import com.kartify.api.exception.ResourceNotFoundException;
+import com.kartify.api.product.dto.ProductAdminListResponse;
 import com.kartify.api.product.dto.ProductCreateRequest;
+import com.kartify.api.product.dto.ProductFileListResponse;
 import com.kartify.api.product.dto.ProductFileRequest;
 import com.kartify.api.product.dto.ProductFileResponse;
 import com.kartify.api.product.dto.ProductResponse;
@@ -25,8 +30,10 @@ import com.kartify.api.product.entity.ProductAttributeValue;
 import com.kartify.api.product.entity.ProductFile;
 import com.kartify.api.product.entity.ProductVariant;
 import com.kartify.api.product.repository.ProductAttributeValueRepository;
+import com.kartify.api.product.repository.ProductFileRepository;
 import com.kartify.api.product.repository.ProductRepository;
 import com.kartify.api.product.repository.ProductVariantRepository;
+import com.kartify.api.shared.dto.PaginationResponse;
 import com.kartify.api.shared.dto.UploadedFileResponse;
 import com.kartify.api.shared.helper.SlugUtil;
 
@@ -34,6 +41,7 @@ import com.kartify.api.shared.helper.SlugUtil;
 public class ProductService {
 
     private final ProductRepository productRepository;
+    private final ProductFileRepository productFileRepository;
     private final ProductVariantRepository productVariantRepository;
     private final ProductAttributeValueRepository productAttributeValueRepository;
     private final CategoryRepository categoryRepository;
@@ -41,16 +49,86 @@ public class ProductService {
 
     public ProductService(
         ProductRepository productRepository, 
+        ProductFileRepository productFileRepository,
         ProductVariantRepository productVariantRepository,
         ProductAttributeValueRepository productAttributeValueRepository,
         CategoryRepository categoryRepository,
         FileStorage fileStorage
     ){
         this.productRepository = productRepository;
+        this.productFileRepository = productFileRepository;
         this.productVariantRepository = productVariantRepository;
         this.productAttributeValueRepository = productAttributeValueRepository;
         this.categoryRepository = categoryRepository;
         this.fileStorage = fileStorage;
+    }
+
+    // --- Get all Product with Pagination ---
+    public PaginationResponse<ProductAdminListResponse> getAll(Pageable pageable){
+
+        // Get all the paginated products
+        Page<Product> productPage = productRepository.findAll(pageable);
+
+        // Get paginated product content
+        List<Product> products = productPage.getContent();
+
+        // Get product ids
+        List<Long> productIds = products.stream().map(product -> product.getId()).toList();
+
+        // Get the files by product ids
+        List<ProductFileListResponse> primaryImages = productFileRepository.findPrimaryImagesByProductIds(productIds)
+            .stream().map(file -> new ProductFileListResponse(
+                file.getId(),
+                file.getProduct().getId(),
+                file.getFilename(),
+                file.getName(),
+                file.getSize(),
+                file.getExtension(),
+                file.getMimeType(),
+                file.getIsPrimary()
+            )).toList();
+
+        // Group Product Image by product id
+        Map<Long, ProductFileListResponse> primaryImageByProduct = primaryImages.stream()
+            .collect(Collectors.toMap(
+                file -> file.productId(),
+                file -> file
+            ));
+
+        List<ProductAdminListResponse> productLists =  products.stream().map(product -> {
+            
+                ProductFileListResponse primaryImage = primaryImageByProduct.get(product.getId());
+
+                String primaryImageUrl = primaryImage != null
+                    ? fileStorage.getUrl("files/public/product/images/" + primaryImage.filename())
+                    : null;
+                
+                return new ProductAdminListResponse(
+                    product.getId(),
+                    product.getCategory().getName(),
+                    product.getName(),
+                    product.getSku(),
+                    product.getPrice(),
+                    product.getComparePrice(),
+                    product.getCostPrice(),
+                    product.getHasVariants(),
+                    product.getStockQuantity(),
+                    product.getWeight(),
+                    product.getIsActive(),
+                    product.getIsFeatured(),
+                    primaryImageUrl
+                );   
+            }).toList();
+
+        return new PaginationResponse<>(
+            productLists,
+            productPage.getNumber() + 1,
+            productPage.getSize(),
+            productPage.getTotalElements(),
+            productPage.getTotalPages(),
+            productPage.hasNext(),
+            productPage.hasPrevious()
+        );
     }
 
     // --- Create Product ---
