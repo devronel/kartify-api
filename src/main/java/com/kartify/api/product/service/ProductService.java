@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -99,9 +100,9 @@ public class ProductService {
             
                 ProductFileListResponse primaryImage = primaryImageByProduct.get(product.getId());
 
-                String primaryImageUrl = primaryImage != null
-                    ? fileStorage.getUrl("files/public/product/images/" + primaryImage.filename())
-                    : null;
+                String filename = primaryImage != null ? primaryImage.filename() : null;
+
+                String primaryImageUrl = fileStorage.getUrl("files/public/product/images/" + filename);
                 
                 return new ProductAdminListResponse(
                     product.getId(),
@@ -280,9 +281,15 @@ public class ProductService {
     }
 
     // --- Get Product Image by Filename ---
-    public Resource getImageByFilename(String filename) throws IOException{
-        String productPath = "product/" + filename;
-        return fileStorage.loadAsResource(productPath);
+    public Resource getImageByFilename(String filename){
+        try {
+            String productPath = "product/" + filename;
+            return fileStorage.loadAsResource(productPath);
+        } catch (RuntimeException e) {
+            return new ClassPathResource(
+                "static/images/default.jpg"
+            ); 
+        }
     }
 
     // --- Helper Function ---
