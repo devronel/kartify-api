@@ -17,7 +17,6 @@ public class CustomUserDetails implements UserDetails {
         this.user = user;
     }
 
-    // Exposes the real User entity so controllers/services can access it directly
     public User getUser() {
         return user;
     }
