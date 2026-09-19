@@ -65,10 +65,16 @@ public class ProductService {
     }
 
     // --- Get all Product with Pagination ---
-    public PaginationResponse<ProductAdminListResponse> getAll(Pageable pageable){
+    public PaginationResponse<ProductAdminListResponse> getAll(String search, Pageable pageable){
 
         // Get all the paginated products
-        Page<Product> productPage = productRepository.findAll(pageable);
+        Page<Product> productPage;
+
+        if(search == null || search.isBlank()){
+            productPage = productRepository.findAll(pageable);
+        }else{
+            productPage = productRepository.search(search, pageable);
+        }
 
         // Get paginated product content
         List<Product> products = productPage.getContent();

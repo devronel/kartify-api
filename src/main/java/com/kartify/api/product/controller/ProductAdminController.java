@@ -2,6 +2,7 @@ package com.kartify.api.product.controller;
 
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -40,6 +41,7 @@ public class ProductAdminController {
 
     @GetMapping
     public ResponseEntity<PaginationResponse<ProductAdminListResponse>> getAll(
+        @RequestParam(required = false) String search,
         @RequestParam(defaultValue = "1") int page,
         @RequestParam(defaultValue = "" + DEFAULT_PAGE_SIZE) int pageSize
     ){
@@ -50,9 +52,9 @@ public class ProductAdminController {
             );
         }
 
-        Pageable pageable = PageRequest.of(page-1, pageSize);
+        Pageable pageable = PageRequest.of(page-1, pageSize, Sort.by(Sort.Direction.DESC, "createdAt"));
 
-        PaginationResponse<ProductAdminListResponse> products = productService.getAll(pageable);
+        PaginationResponse<ProductAdminListResponse> products = productService.getAll(search, pageable);
         
         return ResponseEntity.ok(products);
     }
