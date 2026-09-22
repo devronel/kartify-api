@@ -1,10 +1,13 @@
 package com.kartify.api.product.service;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.core.io.ClassPathResource;
@@ -21,10 +24,15 @@ import com.kartify.api.exception.FieldValidationException;
 import com.kartify.api.exception.ResourceNotFoundException;
 import com.kartify.api.product.dto.ProductAdminListResponse;
 import com.kartify.api.product.dto.ProductCreateRequest;
+import com.kartify.api.product.dto.ProductEditFileResponse;
+import com.kartify.api.product.dto.ProductEditResponse;
+import com.kartify.api.product.dto.ProductEditVariantResponse;
 import com.kartify.api.product.dto.ProductFileListResponse;
 import com.kartify.api.product.dto.ProductFileRequest;
 import com.kartify.api.product.dto.ProductFileResponse;
 import com.kartify.api.product.dto.ProductResponse;
+import com.kartify.api.product.dto.ProductUpdateFileRequest;
+import com.kartify.api.product.dto.ProductUpdateRequest;
 import com.kartify.api.product.dto.ProductVariantRequest;
 import com.kartify.api.product.entity.Product;
 import com.kartify.api.product.entity.ProductAttributeValue;
@@ -138,6 +146,75 @@ public class ProductService {
         );
     }
 
+
+    // --- Get product by id including its files and variants ---
+    public ProductEditResponse getById(Long id){
+        
+        // 1. Find the products
+        Product product = productRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
+
+        // 2. Find the product images
+        List<ProductEditFileResponse> files = product.getFiles().stream()
+            .map(file -> {
+
+                String imageUrl = fileStorage.getUrl("files/public/product/images/" + file.getFilename());
+                
+                ProductEditFileResponse productEditFileResponse = new ProductEditFileResponse(
+                    file.getId(),
+                    imageUrl,
+                    file.getIsPrimary()  
+                );
+                
+                return productEditFileResponse;
+                
+            }).toList();
+
+        // 3. Find Product Variants
+        List<ProductVariant> productVariants = productVariantRepository.findByProductIdWithAttributeValues(id);
+
+        List<ProductEditVariantResponse> variants = productVariants.stream()
+            .map(variant -> {
+
+                List<Long> attributeValueIds = variant.getAttributeValues().stream()
+                    .map(attributeValue -> attributeValue.getId())
+                    .toList();
+
+                return new ProductEditVariantResponse(
+                    variant.getId(),
+                    attributeValueIds,
+                    variant.getSku(),
+                    variant.getPrice(),
+                    variant.getComparePrice(),
+                    variant.getCostPrice(),
+                    variant.getStockQuantity(),
+                    variant.getWeight(),
+                    variant.getIsActive()
+                );
+            })
+            .toList();
+
+        return new ProductEditResponse(
+            product.getName(),
+            product.getSlug(),
+            product.getDescription(),
+            product.getShortDescription(),
+            product.getSku(),
+            product.getPrice(),
+            product.getComparePrice(),
+            product.getCostPrice(),
+            product.getHasVariants(),
+            product.getStockQuantity(),
+            product.getWeight(),
+            product.getIsActive(),
+            product.getIsFeatured(),
+            files,
+            variants
+        );
+        
+    }
+
+
     // --- Create Product ---
     @Transactional
     public ProductResponse create(ProductCreateRequest payload){
@@ -223,6 +300,111 @@ public class ProductService {
         return toResponse(productCreated);
     }
 
+
+    // --- Update Product including files and variants ---
+    @Transactional
+    public void update(Long id, ProductUpdateRequest payload){
+
+        // 1. Get the product
+        Product product = productRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("No product found"));
+
+        // Get category
+        Category category = categoryRepository.findById(payload.categoryId())
+            .orElseThrow(() -> new ResourceNotFoundException("No category found"));
+
+        // 3. Populate the product details
+        product.setCategory(category);
+        product.setName(payload.name());
+        product.setSlug(payload.slug());
+        product.setDescription(payload.description());
+        product.setShortDescription(payload.shortDescription());
+        product.setSku(payload.sku());
+        product.setPrice(payload.price());
+        product.setComparePrice(payload.comparePrice());
+        product.setCostPrice(payload.costPrice());
+        product.setHasVariants(payload.hasVariant());
+        product.setStockQuantity(payload.stockQuantity());
+        product.setWeight(payload.weight());
+
+        // ------------- START MANAGE IMAGES -------------
+
+        if (payload.files() != null) {
+
+            // 1. Get existing image IDs
+            Set<Long> existingProductFileIds = product.getFiles().stream()
+                .map(file -> file.getId())
+                .collect(Collectors.toSet());
+
+            // 2. Get existing image IDs from the request
+            Set<Long> upcomingProductFileIds = payload.files().stream()
+                .map(file -> file.id())
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+            // 3. Find images that were removed
+            /*
+                [1, 2, 3] --> existing file
+                [1, 3] --> upcoming/updated from the request
+                [2] --> Remove ids
+            */
+            Set<Long> removeIds = new HashSet<>(existingProductFileIds);
+            removeIds.removeAll(upcomingProductFileIds);
+
+            // 4. Delete the images
+            productFileRepository.deleteByIds(removeIds);
+
+            // 5. If there are images, validate/update/add them
+            if (!payload.files().isEmpty()) {
+
+                long primaryCount = payload.files().stream()
+                    .filter(file -> Boolean.TRUE.equals(file.isPrimary()))
+                    .count();
+
+                if (primaryCount != 1) {
+                    throw new IllegalArgumentException("Only one primary file is allowed");
+                }
+
+                for (ProductUpdateFileRequest file : payload.files()) {
+
+                    if (file.id() != null) {
+
+                        ProductFile productFile = productFileRepository
+                            .findByIdAndProductId(file.id(), product.getId())
+                            .orElseThrow(() ->
+                                new ResourceNotFoundException("No product file found")
+                            );
+
+                        productFile.setIsPrimary(file.isPrimary());
+
+                    } else {
+
+                        UploadedFileResponse metadata = fileStorage.upload(file.file(), "product");
+
+                        ProductFile productFile = new ProductFile();
+                        productFile.setFilename(metadata.fileName());
+                        productFile.setName(metadata.originalName());
+                        productFile.setSize(metadata.size());
+                        productFile.setExtension(metadata.extension());
+                        productFile.setMimeType(metadata.mimeType());
+                        productFile.setIsPrimary(file.isPrimary());
+
+                        product.addFile(productFile);
+                    }
+                }
+            }
+        }
+
+        // ------------- END MANAGE IMAGES -------------
+
+        // ------------- START MANAGE VARIANTS -------------
+
+        
+        // ------------- END MANAGE VARIANTS -------------
+
+    }
+
+
     // --- Create product variant ---
     private ProductVariant createVariant(Product product, ProductVariantRequest payload, int index){
 
@@ -271,6 +453,7 @@ public class ProductService {
 
     }
 
+
     // --- Upload files to file storage ---
     private List<ProductFileResponse> uploadFiles(List<ProductFileRequest> files){
         List<ProductFileResponse> filesMetadata = new ArrayList<>();
@@ -286,6 +469,7 @@ public class ProductService {
         return filesMetadata;
     }
 
+
     // --- Get Product Image by Filename ---
     public Resource getImageByFilename(String filename){
         try {
@@ -297,6 +481,7 @@ public class ProductService {
             ); 
         }
     }
+
 
     // --- Helper Function ---
 
