@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.springframework.core.io.ClassPathResource;
@@ -309,78 +310,89 @@ public class ProductService {
         Product product = productRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("No product found"));
 
-        // Get category
+        // 2. Get category
         Category category = categoryRepository.findById(payload.categoryId())
             .orElseThrow(() -> new ResourceNotFoundException("No category found"));
 
-        // 3. Populate the product details
+        // 4. Populate the product details
         product.setCategory(category);
         product.setName(payload.name());
         product.setSlug(payload.slug());
         product.setDescription(payload.description());
         product.setShortDescription(payload.shortDescription());
-        product.setSku(payload.sku());
+        product.setSku(!payload.sku().isBlank() ? payload.sku().toUpperCase() : null);
         product.setPrice(payload.price());
-        product.setComparePrice(payload.comparePrice());
-        product.setCostPrice(payload.costPrice());
+
+        BigDecimal comparePrice = payload.comparePrice();
+        if (comparePrice != null && comparePrice.compareTo(BigDecimal.ZERO) > 0) {
+            product.setComparePrice(comparePrice);
+        }
+
+        BigDecimal costPrice = payload.costPrice();
+        if (costPrice != null && costPrice.compareTo(BigDecimal.ZERO) > 0) {
+            product.setCostPrice(costPrice);
+        }
+
         product.setHasVariants(payload.hasVariant());
         product.setStockQuantity(payload.stockQuantity());
         product.setWeight(payload.weight());
 
+
         // ------------- START MANAGE IMAGES -------------
 
-        if (payload.files() != null) {
+        if(payload.files() == null) {
+
+            product.getFiles().clear();
+            
+        } else {
 
             // 1. Get existing image IDs
             Set<Long> existingProductFileIds = product.getFiles().stream()
                 .map(file -> file.getId())
                 .collect(Collectors.toSet());
-
+    
             // 2. Get existing image IDs from the request
-            Set<Long> upcomingProductFileIds = payload.files().stream()
+            Set<Long> incomingProductFileIds = payload.files().stream()
                 .map(file -> file.id())
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
-
+    
             // 3. Find images that were removed
-            /*
-                [1, 2, 3] --> existing file
-                [1, 3] --> upcoming/updated from the request
-                [2] --> Remove ids
-            */
             Set<Long> removeIds = new HashSet<>(existingProductFileIds);
-            removeIds.removeAll(upcomingProductFileIds);
-
+            removeIds.removeAll(incomingProductFileIds);
+    
             // 4. Delete the images
-            productFileRepository.deleteByIds(removeIds);
-
+            product.getFiles().removeIf(
+                file -> removeIds.contains(file.getId())
+            );
+    
             // 5. If there are images, validate/update/add them
             if (!payload.files().isEmpty()) {
-
+    
                 long primaryCount = payload.files().stream()
                     .filter(file -> Boolean.TRUE.equals(file.isPrimary()))
                     .count();
-
+    
                 if (primaryCount != 1) {
-                    throw new IllegalArgumentException("Only one primary file is allowed");
+                    throw new IllegalArgumentException("Product must have exactly one primary file");
                 }
-
+    
                 for (ProductUpdateFileRequest file : payload.files()) {
-
+    
                     if (file.id() != null) {
-
+    
                         ProductFile productFile = productFileRepository
                             .findByIdAndProductId(file.id(), product.getId())
                             .orElseThrow(() ->
                                 new ResourceNotFoundException("No product file found")
                             );
-
+    
                         productFile.setIsPrimary(file.isPrimary());
-
+    
                     } else {
-
+    
                         UploadedFileResponse metadata = fileStorage.upload(file.file(), "product");
-
+    
                         ProductFile productFile = new ProductFile();
                         productFile.setFilename(metadata.fileName());
                         productFile.setName(metadata.originalName());
@@ -388,7 +400,7 @@ public class ProductService {
                         productFile.setExtension(metadata.extension());
                         productFile.setMimeType(metadata.mimeType());
                         productFile.setIsPrimary(file.isPrimary());
-
+    
                         product.addFile(productFile);
                     }
                 }
@@ -427,6 +439,21 @@ public class ProductService {
                 variant -> removeVariantIds.contains(variant.getId())
             );
     
+            
+
+            // --- START CREATE MAP<Long, ProductAttributeValue> FOR ATTRIBUTE VALUES ---
+            Set<Long> attributeValueIds = payload.variants().stream()
+                .flatMap(variant -> variant.attributeValueIds().stream())
+                .collect(Collectors.toSet());
+
+            List<ProductAttributeValue> productAttributeValues = productAttributeValueRepository.findAllById(attributeValueIds);
+
+            Map<Long, ProductAttributeValue> productAttributeValueMap = productAttributeValues.stream()
+                    .collect(Collectors.toMap(value -> value.getId(), Function.identity()));
+            // --- END CREATE MAP FOR ATTRIBUTE VALUES ---
+
+
+
             // 5. Process incoming variants
             for (ProductUpdateVariantRequest payloadVariant : payload.variants()) {
     
@@ -454,17 +481,29 @@ public class ProductService {
     
                 for (Long attributeValueId : payloadVariant.attributeValueIds()) {
     
-                    ProductAttributeValue attributeValue = productAttributeValueRepository.findById(attributeValueId)
-                        .orElseThrow(() -> new ResourceNotFoundException("Variant attribute value not found"));
-    
+                    ProductAttributeValue attributeValue = productAttributeValueMap.get(attributeValueId);
+
+                    if (attributeValue == null) {
+                        throw new ResourceNotFoundException("Variant attribute value not found");
+                    }
+
                     productVariant.addVariantAttributeValue(attributeValue);
                 }
     
                 // 7. Update variant properties
-                productVariant.setSku(payloadVariant.sku());
+                productVariant.setSku(!payloadVariant.sku().isBlank() ? payloadVariant.sku().toUpperCase() : null);
                 productVariant.setPrice(payloadVariant.price());
-                productVariant.setComparePrice(payloadVariant.comparePrice());
-                productVariant.setCostPrice(payloadVariant.costPrice());
+
+                BigDecimal variantComparePrice = payloadVariant.comparePrice();
+                if (variantComparePrice != null && variantComparePrice.compareTo(BigDecimal.ZERO) > 0) {
+                    productVariant.setComparePrice(variantComparePrice);
+                }
+
+                BigDecimal variantCostPrice = payloadVariant.costPrice();
+                if (variantCostPrice != null && variantCostPrice.compareTo(BigDecimal.ZERO) > 0) {
+                    productVariant.setCostPrice(variantCostPrice);
+                }
+
                 productVariant.setStockQuantity(payloadVariant.stockQuantity());
                 productVariant.setWeight(payloadVariant.weight());
                 productVariant.setIsActive(payloadVariant.isActive());
