@@ -3,6 +3,7 @@ package com.kartify.api.product.dto;
 import java.math.BigDecimal;
 import java.util.List;
 
+import com.kartify.api.contract.ProductVariantPayload;
 import com.kartify.api.product.validator.annotation.ValidProductVariant;
 
 import jakarta.validation.Valid;
@@ -51,4 +52,4 @@ public record ProductCreateRequest(
     List<ProductFileRequest> files,
 
     List<@Valid ProductVariantRequest> variants
-){}
+) implements ProductVariantPayload {}

@@ -6,7 +6,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -33,6 +32,7 @@ import com.kartify.api.product.dto.ProductFileResponse;
 import com.kartify.api.product.dto.ProductResponse;
 import com.kartify.api.product.dto.ProductUpdateFileRequest;
 import com.kartify.api.product.dto.ProductUpdateRequest;
+import com.kartify.api.product.dto.ProductUpdateVariantRequest;
 import com.kartify.api.product.dto.ProductVariantRequest;
 import com.kartify.api.product.entity.Product;
 import com.kartify.api.product.entity.ProductAttributeValue;
@@ -397,9 +397,81 @@ public class ProductService {
 
         // ------------- END MANAGE IMAGES -------------
 
+
         // ------------- START MANAGE VARIANTS -------------
 
-        
+        if(Boolean.FALSE.equals(payload.hasVariant())){
+            
+            // Clear the variants
+            product.getVariants().clear();
+
+        }else{
+
+            // 1. Get the ids of existing variants
+            Set<Long> existingVariantIds = product.getVariants().stream()
+                .map(variant -> variant.getId())
+                .collect(Collectors.toSet());
+    
+            // 2. Get the ids variants in upcoming request data
+            Set<Long> upcomingVariantIds = payload.variants().stream()
+                .map(variant -> variant.id())
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+    
+            // 3. Get variants ids to be remove
+            Set<Long> removeVariantIds = new HashSet<>(existingVariantIds);
+            removeVariantIds.removeAll(upcomingVariantIds);
+    
+            // 4. Remove the variants by ids
+            product.getVariants().removeIf(
+                variant -> removeVariantIds.contains(variant.getId())
+            );
+    
+            // 5. Process incoming variants
+            for (ProductUpdateVariantRequest payloadVariant : payload.variants()) {
+    
+                ProductVariant productVariant;
+    
+                if (payloadVariant.id() != null) {
+    
+                    // Update existing variant
+                    productVariant = product.getVariants().stream()
+                        .filter(variant -> variant.getId().equals(payloadVariant.id()))
+                        .findFirst()
+                        .orElseThrow(() -> new ResourceNotFoundException("Product variant not found"));
+    
+                } else {
+    
+                    // Create new variant
+                    productVariant = new ProductVariant();
+    
+                    product.addVariant(productVariant);
+                    
+                }
+    
+                // 6. Update attribute values
+                productVariant.getAttributeValues().clear();
+    
+                for (Long attributeValueId : payloadVariant.attributeValueIds()) {
+    
+                    ProductAttributeValue attributeValue = productAttributeValueRepository.findById(attributeValueId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Variant attribute value not found"));
+    
+                    productVariant.addVariantAttributeValue(attributeValue);
+                }
+    
+                // 7. Update variant properties
+                productVariant.setSku(payloadVariant.sku());
+                productVariant.setPrice(payloadVariant.price());
+                productVariant.setComparePrice(payloadVariant.comparePrice());
+                productVariant.setCostPrice(payloadVariant.costPrice());
+                productVariant.setStockQuantity(payloadVariant.stockQuantity());
+                productVariant.setWeight(payloadVariant.weight());
+                productVariant.setIsActive(payloadVariant.isActive());
+            }
+
+        }
+
         // ------------- END MANAGE VARIANTS -------------
 
     }

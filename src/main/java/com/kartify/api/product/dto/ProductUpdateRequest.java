@@ -3,10 +3,15 @@ package com.kartify.api.product.dto;
 import java.math.BigDecimal;
 import java.util.List;
 
+import com.kartify.api.contract.ProductVariantPayload;
+import com.kartify.api.product.validator.annotation.ValidProductVariant;
+
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
+@ValidProductVariant
 public record ProductUpdateRequest(
 
     @NotNull(message = "Category is required")
@@ -40,5 +45,7 @@ public record ProductUpdateRequest(
 
     BigDecimal weight,
 
-    List<ProductUpdateFileRequest> files
-) {}
+    List<ProductUpdateFileRequest> files,
+
+    List<@Valid ProductUpdateVariantRequest> variants
+) implements ProductVariantPayload {}

@@ -1,8 +1,11 @@
 package com.kartify.api.product.repository;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -14,6 +17,8 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
 
     boolean existsBySku(String sku);
 
+    Optional<ProductVariant> findByIdAndProductId(Long id, Long productId);
+    
     @Query("""
         SELECT DISTINCT variant
         FROM ProductVariant variant
@@ -21,5 +26,10 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
         WHERE variant.product.id = :productId
     """)
     List<ProductVariant> findByProductIdWithAttributeValues(@Param("productId") Long productId);
+
+
+    @Modifying
+    @Query("DELETE FROM ProductVariant variant WHERE variant.id IN :ids")
+    void deleteByIds(@Param("ids") Collection<Long> ids);
 
 }

@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -18,6 +19,7 @@ import com.kartify.api.product.dto.ProductAdminListResponse;
 import com.kartify.api.product.dto.ProductCreateRequest;
 import com.kartify.api.product.dto.ProductEditResponse;
 import com.kartify.api.product.dto.ProductResponse;
+import com.kartify.api.product.dto.ProductUpdateRequest;
 import com.kartify.api.product.service.ProductService;
 import com.kartify.api.shared.dto.ApiResponse;
 import com.kartify.api.shared.dto.PaginationResponse;
@@ -69,6 +71,17 @@ public class ProductAdminController {
         ProductEditResponse productEditResponse = productService.getById(id);
 
         return ResponseEntity.ok(ApiResponse.success("Get product!", productEditResponse));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<String> update(
+        @PathVariable Long id,
+        @Valid @ModelAttribute ProductUpdateRequest payload
+    ) {
+
+        productService.update(id, payload);
+
+        return ResponseEntity.ok("Product Updated");
     }
 
 }
