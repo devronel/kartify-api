@@ -1,7 +1,5 @@
 package com.kartify.api.product.controller;
 
-import java.util.List;
-
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -74,14 +72,15 @@ public class ProductAdminController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<String> update(
-        @PathVariable Long id,
-        @Valid @ModelAttribute ProductUpdateRequest payload
-    ) {
+    public ResponseEntity<Void> update(@PathVariable Long id, @Valid @ModelAttribute ProductUpdateRequest payload) {
 
-        productService.update(id, payload);
+        boolean isUpdated = productService.update(id, payload);
 
-        return ResponseEntity.ok("Product Updated");
+        if(!isUpdated){
+            return ResponseEntity.notFound().build();
+        }
+
+        return ResponseEntity.noContent().build();
     }
 
 }

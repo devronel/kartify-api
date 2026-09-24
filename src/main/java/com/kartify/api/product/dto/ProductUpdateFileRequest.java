@@ -7,8 +7,6 @@ import jakarta.validation.constraints.NotNull;
 public record ProductUpdateFileRequest(
     Long id,
 
-    String fileUrl,
-
     MultipartFile file,
 
     @NotNull(message = "Is Primary is required")

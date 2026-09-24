@@ -23,6 +23,7 @@ import com.kartify.api.contract.FileStorage;
 import com.kartify.api.exception.FieldValidationException;
 import com.kartify.api.exception.ResourceNotFoundException;
 import com.kartify.api.product.dto.ProductAdminListResponse;
+import com.kartify.api.product.dto.ProductCategoryResponse;
 import com.kartify.api.product.dto.ProductCreateRequest;
 import com.kartify.api.product.dto.ProductEditFileResponse;
 import com.kartify.api.product.dto.ProductEditResponse;
@@ -195,7 +196,14 @@ public class ProductService {
             })
             .toList();
 
+        ProductCategoryResponse category = new ProductCategoryResponse(
+            product.getCategory().getId(),
+            product.getCategory().getName(),
+            product.getCategory().getIsActive()
+        );
+
         return new ProductEditResponse(
+            category,
             product.getName(),
             product.getSlug(),
             product.getDescription(),
@@ -304,7 +312,7 @@ public class ProductService {
 
     // --- Update Product including files and variants ---
     @Transactional
-    public void update(Long id, ProductUpdateRequest payload){
+    public boolean update(Long id, ProductUpdateRequest payload){
 
         // 1. Get the product
         Product product = productRepository.findById(id)
@@ -513,6 +521,7 @@ public class ProductService {
 
         // ------------- END MANAGE VARIANTS -------------
 
+        return true;
     }
 
 

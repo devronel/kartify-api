@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 public record ProductEditResponse(
+    ProductCategoryResponse category,
     String name,
     String slug,
     String description,
@@ -12,7 +13,7 @@ public record ProductEditResponse(
     BigDecimal price,
     BigDecimal comparePrice,
     BigDecimal costPrice,
-    Boolean hasVariants,
+    Boolean hasVariant,
     Integer stockQuantity,
     BigDecimal weight,
     Boolean isActive,

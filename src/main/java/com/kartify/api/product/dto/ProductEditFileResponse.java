@@ -2,6 +2,6 @@ package com.kartify.api.product.dto;
 
 public record ProductEditFileResponse(
     Long id,
-    String imageUrl,
+    String fileUrl,
     Boolean isPrimary
 ) {}
