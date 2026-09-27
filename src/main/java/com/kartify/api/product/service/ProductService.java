@@ -3,6 +3,7 @@ package com.kartify.api.product.service;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -10,6 +11,8 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
@@ -23,6 +26,8 @@ import com.kartify.api.contract.FileStorage;
 import com.kartify.api.exception.FieldValidationException;
 import com.kartify.api.exception.ResourceNotFoundException;
 import com.kartify.api.product.dto.ProductAdminListResponse;
+import com.kartify.api.product.dto.ProductAttributeValueResponse;
+import com.kartify.api.product.dto.ProductAttributeWithValueResponse;
 import com.kartify.api.product.dto.ProductCategoryResponse;
 import com.kartify.api.product.dto.ProductCreateRequest;
 import com.kartify.api.product.dto.ProductEditFileResponse;
@@ -50,6 +55,8 @@ import com.kartify.api.shared.helper.SlugUtil;
 
 @Service
 public class ProductService {
+
+    private static final Logger log = LoggerFactory.getLogger(ProductService.class);
 
     private final ProductRepository productRepository;
     private final ProductFileRepository productFileRepository;
@@ -196,14 +203,44 @@ public class ProductService {
             })
             .toList();
 
-        ProductCategoryResponse category = new ProductCategoryResponse(
-            product.getCategory().getId(),
-            product.getCategory().getName(),
-            product.getCategory().getIsActive()
-        );
+        // Get product variant attribute and attribute values
+        List<ProductAttributeWithValueResponse> variantAttributes = productVariants.stream()
+            .flatMap(variant -> {
+
+                return variant.getAttributeValues().stream();
+
+            })
+            .collect(Collectors.groupingBy(
+                attributeValue -> attributeValue.getProductAttribute().getId(),
+                LinkedHashMap::new,
+                Collectors.toList()
+            ))
+            .entrySet().stream()
+            .map(entry -> {
+
+                List<ProductAttributeValueResponse> values = entry.getValue().stream()
+                    .map(attributeValue -> new ProductAttributeValueResponse(
+                        attributeValue.getId(),
+                        attributeValue.getProductAttribute().getId(),
+                        attributeValue.getValue()
+                    ))
+                    .distinct()
+                    .toList();
+
+                String attributeName = entry.getValue().get(0).getProductAttribute().getName();
+
+                ProductAttributeWithValueResponse response = new ProductAttributeWithValueResponse(
+                    entry.getKey(),
+                    attributeName,
+                    values
+                );
+
+                return response;
+            })
+            .toList();
 
         return new ProductEditResponse(
-            category,
+            product.getCategory().getId(),
             product.getName(),
             product.getSlug(),
             product.getDescription(),
@@ -218,7 +255,8 @@ public class ProductService {
             product.getIsActive(),
             product.getIsFeatured(),
             files,
-            variants
+            variants,
+            variantAttributes
         );
         
     }

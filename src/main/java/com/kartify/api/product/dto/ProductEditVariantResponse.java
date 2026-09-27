@@ -5,7 +5,7 @@ import java.util.List;
 
 public record ProductEditVariantResponse(
     Long id,
-    List<Long> attributeIds,
+    List<Long> attributeValueIds,
     String sku,
     BigDecimal price,
     BigDecimal comparePrice,

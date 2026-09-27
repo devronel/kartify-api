@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 public record ProductEditResponse(
-    ProductCategoryResponse category,
+    Long categoryId,
     String name,
     String slug,
     String description,
@@ -19,5 +19,6 @@ public record ProductEditResponse(
     Boolean isActive,
     Boolean isFeatured,
     List<ProductEditFileResponse> files,
-    List<ProductEditVariantResponse> variants
+    List<ProductEditVariantResponse> variants,
+    List<ProductAttributeWithValueResponse> attributes
 ) {}

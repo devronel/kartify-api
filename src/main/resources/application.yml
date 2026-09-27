@@ -5,6 +5,12 @@ server:
 logging:
   level:
     org.springframework.security: TRACE
+  file:
+    name: logs/application.log
+  logback:
+    rollingpolicy:
+      max-file-size: 10MB
+      max-history: 7
 spring: 
   application:
     name: api
