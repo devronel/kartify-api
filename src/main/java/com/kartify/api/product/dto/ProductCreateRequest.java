@@ -45,10 +45,6 @@ public record ProductCreateRequest(
 
     BigDecimal weight,
 
-    Boolean isActive,
-
-    Boolean isFeatured,
-
     List<ProductFileRequest> files,
 
     List<@Valid ProductVariantRequest> variants

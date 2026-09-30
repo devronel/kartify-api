@@ -87,17 +87,21 @@ public class ProductService {
         // Get all the paginated products
         Page<Product> productPage;
 
+
         if(search == null || search.isBlank()){
             productPage = productRepository.findAll(pageable);
         }else{
             productPage = productRepository.search(search, pageable);
         }
 
+
         // Get paginated product content
         List<Product> products = productPage.getContent();
 
+
         // Get product ids
         List<Long> productIds = products.stream().map(product -> product.getId()).toList();
+
 
         // Get the files by product ids
         List<ProductFileListResponse> primaryImages = productFileRepository.findPrimaryImagesByProductIds(productIds)
@@ -112,12 +116,24 @@ public class ProductService {
                 file.getIsPrimary()
             )).toList();
 
+
         // Group Product Image by product id
         Map<Long, ProductFileListResponse> primaryImageByProduct = primaryImages.stream()
             .collect(Collectors.toMap(
                 file -> file.productId(),
                 file -> file
             ));
+
+
+        // Create map for sum of variant by product for stock quantity total
+        Map<Long, Integer> variantStockByProduct = productVariantRepository
+            .sumStockByProductIds(productIds)
+            .stream()
+            .collect(Collectors.toMap(
+                row -> (Long) row[0],
+                row -> ((Number) row[1]).intValue()
+            ));
+        
 
         List<ProductAdminListResponse> productLists =  products.stream().map(product -> {
             
@@ -127,6 +143,10 @@ public class ProductService {
 
                 String primaryImageUrl = fileStorage.getUrl("files/public/product/images/" + filename);
                 
+                Integer stockQuantity = !product.getHasVariants() 
+                    ? product.getStockQuantity() 
+                    : variantStockByProduct.getOrDefault(product.getId(), 0);
+
                 return new ProductAdminListResponse(
                     product.getId(),
                     product.getCategory().getName(),
@@ -136,7 +156,7 @@ public class ProductService {
                     product.getComparePrice(),
                     product.getCostPrice(),
                     product.getHasVariants(),
-                    product.getStockQuantity(),
+                    stockQuantity,
                     product.getWeight(),
                     product.getIsActive(),
                     product.getIsFeatured(),
@@ -252,8 +272,6 @@ public class ProductService {
             product.getHasVariants(),
             product.getStockQuantity(),
             product.getWeight(),
-            product.getIsActive(),
-            product.getIsFeatured(),
             files,
             variants,
             variantAttributes
@@ -307,8 +325,8 @@ public class ProductService {
         product.setHasVariants(payload.hasVariant());
         product.setStockQuantity(payload.stockQuantity());
         product.setWeight(payload.weight());
-        product.setIsActive(payload.isActive());
-        product.setIsFeatured(payload.isFeatured());
+        product.setIsActive(false);
+        product.setIsFeatured(false);
 
         // --- Upload product files ---
         if(payload.files() != null && !payload.files().isEmpty()){
@@ -381,6 +399,8 @@ public class ProductService {
 
         product.setHasVariants(payload.hasVariant());
         product.setStockQuantity(payload.stockQuantity());
+        product.setIsActive(false);
+        product.setIsFeatured(false);
         product.setWeight(payload.weight());
 
 
@@ -560,6 +580,30 @@ public class ProductService {
         // ------------- END MANAGE VARIANTS -------------
 
         return true;
+    }
+
+
+    // --- Switch product status ---
+    public void updateActive(Long id, boolean active) {
+
+        Product product = productRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
+
+        product.setIsActive(active);
+
+        productRepository.save(product);
+
+    }
+
+
+    // --- Delete product ---
+    public void delete(Long id) {
+
+        Product product = productRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
+
+        productRepository.delete(product);
+
     }
 
 

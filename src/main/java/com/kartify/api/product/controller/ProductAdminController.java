@@ -1,14 +1,19 @@
 package com.kartify.api.product.controller;
 
+import java.util.Map;
+
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -37,12 +42,16 @@ public class ProductAdminController {
         this.productService = productService;
     }
 
+
+    // --- Add new product ---
     @PostMapping
     public ResponseEntity<ApiResponse<ProductResponse>> create(@Valid @ModelAttribute ProductCreateRequest request){
         ProductResponse product = productService.create(request);
         return ResponseEntity.ok(ApiResponse.success("Product is Successfully Created.", product));
     }
 
+
+    // --- Get all products with pagination ---
     @GetMapping
     public ResponseEntity<PaginationResponse<ProductAdminListResponse>> getAll(
         @RequestParam(required = false) String search,
@@ -56,13 +65,15 @@ public class ProductAdminController {
             );
         }
 
-        Pageable pageable = PageRequest.of(page-1, pageSize, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Pageable pageable = PageRequest.of(page-1, pageSize, Sort.by(Sort.Direction.DESC, "updatedAt"));
 
         PaginationResponse<ProductAdminListResponse> products = productService.getAll(search, pageable);
         
         return ResponseEntity.ok(products);
     }
 
+
+    // --- Get Product Details by id ---
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<ProductEditResponse>> getById(@PathVariable Long id) {
 
@@ -71,6 +82,8 @@ public class ProductAdminController {
         return ResponseEntity.ok(ApiResponse.success("Get product!", productEditResponse));
     }
 
+
+    // --- Update product ---
     @PutMapping("/{id}")
     public ResponseEntity<Void> update(@PathVariable Long id, @Valid @ModelAttribute ProductUpdateRequest payload) {
 
@@ -81,6 +94,33 @@ public class ProductAdminController {
         }
 
         return ResponseEntity.noContent().build();
+    }
+    
+
+    // --- Delete product ---
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id){
+
+        productService.delete(id);
+
+        return ResponseEntity.noContent().build();
+
+    }
+
+    
+    // --- Toggle product active ---
+    @PatchMapping("/{id}/active")
+    public ResponseEntity<Void> updateActive(
+        @PathVariable Long id,
+        @RequestBody Map<String, Boolean> body
+    ){
+
+        Boolean active = body.get("active");
+
+        productService.updateActive(id, active);
+
+        return ResponseEntity.noContent().build();
+
     }
 
 }

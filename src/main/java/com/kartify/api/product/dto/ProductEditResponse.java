@@ -16,8 +16,6 @@ public record ProductEditResponse(
     Boolean hasVariant,
     Integer stockQuantity,
     BigDecimal weight,
-    Boolean isActive,
-    Boolean isFeatured,
     List<ProductEditFileResponse> files,
     List<ProductEditVariantResponse> variants,
     List<ProductAttributeWithValueResponse> attributes

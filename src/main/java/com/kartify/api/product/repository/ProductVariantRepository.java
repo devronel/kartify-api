@@ -32,4 +32,17 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
     @Query("DELETE FROM ProductVariant variant WHERE variant.id IN :ids")
     void deleteByIds(@Param("ids") Collection<Long> ids);
 
+
+    @Query("SELECT SUM(productVariant.stockQuantity) FROM ProductVariant productVariant")
+    Integer sumStockQuantity();
+
+
+    @Query("""
+        SELECT productVariant.product.id, COALESCE(SUM(productVariant.stockQuantity), 0)
+        FROM ProductVariant productVariant
+        WHERE productVariant.product.id IN :productIds
+        GROUP BY productVariant.product.id
+    """)
+    List<Object[]> sumStockByProductIds(List<Long> productIds);
+
 }

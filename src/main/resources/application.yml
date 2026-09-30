@@ -1,4 +1,6 @@
-server: 
+server:
+  tomcat:
+    max-part-count: 200
   error:
     include-message: always
     include-binding-errors: always
@@ -38,8 +40,9 @@ spring:
           starttls:
             enable: true
   servlet:
-    multipart: 
-      max-file-size: 5MB
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 50MB
 imagekit:
   private-key: ${IMAGEKIT_PRIVATE_KEY}
   public-key: ${IMAGEKIT_PUBLIC_KEY}
