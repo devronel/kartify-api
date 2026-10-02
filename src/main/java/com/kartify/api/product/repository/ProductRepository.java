@@ -35,4 +35,13 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     """)
     Page<Product> search(@Param("search") String search, Pageable pageable);
 
+
+    @Query("""
+        SELECT product
+        FROM Product product
+        JOIN product.category cat
+        WHERE product.isActive IS TRUE
+    """)
+    Page<Product> findAllActive(Pageable pageable);
+
 }

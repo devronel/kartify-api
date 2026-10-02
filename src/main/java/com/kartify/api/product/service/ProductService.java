@@ -41,6 +41,9 @@ import com.kartify.api.product.dto.ProductUpdateFileRequest;
 import com.kartify.api.product.dto.ProductUpdateRequest;
 import com.kartify.api.product.dto.ProductUpdateVariantRequest;
 import com.kartify.api.product.dto.ProductVariantRequest;
+import com.kartify.api.product.dto.PublicProductDetailsResponse;
+import com.kartify.api.product.dto.PublicProductResponse;
+import com.kartify.api.product.dto.PublicVariantResponse;
 import com.kartify.api.product.entity.Product;
 import com.kartify.api.product.entity.ProductAttributeValue;
 import com.kartify.api.product.entity.ProductFile;
@@ -685,8 +688,191 @@ public class ProductService {
     }
 
 
-    // --- Helper Function ---
+    // --------------- Public --------------------
 
+    // --- Get all products ---
+    public PaginationResponse<PublicProductResponse> getAllActive(Pageable pageable){
+
+        // Get all the paginated products
+        Page<Product> productPage;
+
+
+        productPage = productRepository.findAllActive(pageable);
+
+
+        // Get paginated product content
+        List<Product> products = productPage.getContent();
+
+
+        // Get product ids
+        List<Long> productIds = products.stream().map(product -> product.getId()).toList();
+
+
+        // Get the files by product ids
+        List<ProductFileListResponse> primaryImages = productFileRepository.findPrimaryImagesByProductIds(productIds)
+            .stream().map(file -> new ProductFileListResponse(
+                file.getId(),
+                file.getProduct().getId(),
+                file.getFilename(),
+                file.getName(),
+                file.getSize(),
+                file.getExtension(),
+                file.getMimeType(),
+                file.getIsPrimary()
+            )).toList();
+
+
+        // Group Product Image by product id
+        Map<Long, ProductFileListResponse> primaryImageByProduct = primaryImages.stream()
+            .collect(Collectors.toMap(
+                file -> file.productId(),
+                file -> file
+            ));
+        
+
+        List<PublicProductResponse> productLists =  products.stream().map(product -> {
+            
+                ProductFileListResponse primaryImage = primaryImageByProduct.get(product.getId());
+
+                String filename = primaryImage != null ? primaryImage.filename() : null;
+
+                String primaryImageUrl = fileStorage.getUrl("files/public/product/images/" + filename);
+                
+                return new PublicProductResponse(
+                    product.getId(),
+                    product.getCategory().getName(),
+                    product.getName(),
+                    product.getSlug(),
+                    product.getDescription(),
+                    product.getShortDescription(),
+                    product.getPrice(),
+                    product.getComparePrice(),
+                    product.getHasVariants(),
+                    primaryImageUrl
+                );   
+            }).toList();
+
+        return new PaginationResponse<>(
+            productLists,
+            productPage.getNumber() + 1,
+            productPage.getSize(),
+            productPage.getTotalElements(),
+            productPage.getTotalPages(),
+            productPage.hasNext(),
+            productPage.hasPrevious()
+        );
+    }
+
+
+    // --- Get product details by slug ---
+    public PublicProductDetailsResponse getProductBySlug(String slug){
+
+        Product product = productRepository.findBySlug(slug)
+            .filter(prod -> prod.getIsActive())
+            .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
+
+        List<PublicVariantResponse> variants = new ArrayList<>();
+        List<ProductAttributeWithValueResponse> variantAttributes = new ArrayList<>();
+        
+        // Get all the product variants and variant attributes
+        if(Boolean.TRUE.equals(product.getHasVariants())){
+
+            List<ProductVariant> productVariants = productVariantRepository.findByProductIdWithAttributeValues(product.getId());
+
+            variants = productVariants.stream()
+                .map(variant -> {
+
+                    List<Long> attributeValueIds = variant.getAttributeValues().stream()
+                        .map(attributeValue -> attributeValue.getId())
+                        .toList();
+
+                    Boolean inStock = variant.getStockQuantity() > 0;
+
+                    return new PublicVariantResponse(
+                        variant.getId(),
+                        attributeValueIds,
+                        variant.getSku(),
+                        variant.getPrice(),
+                        inStock
+                    );
+                })
+                .toList();
+
+            // Get product variant attribute and attribute values
+            variantAttributes = productVariants.stream()
+                .flatMap(variant -> {
+
+                    return variant.getAttributeValues().stream();
+
+                })
+                .collect(Collectors.groupingBy(
+                    attributeValue -> attributeValue.getProductAttribute().getId(),
+                    LinkedHashMap::new,
+                    Collectors.toList()
+                ))
+                .entrySet().stream()
+                .map(entry -> {
+
+                    List<ProductAttributeValueResponse> values = entry.getValue().stream()
+                        .map(attributeValue -> new ProductAttributeValueResponse(
+                            attributeValue.getId(),
+                            attributeValue.getProductAttribute().getId(),
+                            attributeValue.getValue()
+                        ))
+                        .distinct()
+                        .toList();
+
+                    String attributeName = entry.getValue().get(0).getProductAttribute().getName();
+
+                    ProductAttributeWithValueResponse response = new ProductAttributeWithValueResponse(
+                        entry.getKey(),
+                        attributeName,
+                        values
+                    );
+
+                    return response;
+                })
+                .toList();
+        }
+
+
+        // Get all the product images
+        List<String> images = product.getFiles().stream()
+            .map(file -> {
+                return fileStorage.getUrl("files/public/product/images/" + file.getFilename());
+            }).toList();
+
+
+        Integer stockQuantity = !product.getHasVariants() 
+                ? product.getStockQuantity() 
+                : product.getVariants().stream()
+                    .mapToInt(variant -> variant.getStockQuantity())
+                    .sum();
+
+
+        return new PublicProductDetailsResponse(
+            product.getId(),
+            product.getName(),
+            product.getSlug(),
+            product.getDescription(),
+            product.getShortDescription(),
+            product.getPrice(),
+            product.getComparePrice(),
+            product.getHasVariants(),
+            true,
+            stockQuantity,
+            images,
+            variantAttributes,
+            variants
+        );
+
+    }
+
+
+    // --------------- Public --------------------
+
+
+    // --- Helper Function ---
     private ProductResponse toResponse(Product product){
         return new ProductResponse(
             product.getName(),
