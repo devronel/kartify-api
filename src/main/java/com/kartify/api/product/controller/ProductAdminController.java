@@ -54,7 +54,7 @@ public class ProductAdminController {
     // --- Get all products with pagination ---
     @GetMapping
     public ResponseEntity<PaginationResponse<ProductAdminListResponse>> getAll(
-        @RequestParam(required = false) String search,
+        @RequestParam(name = "q", required = false) String search,
         @RequestParam(defaultValue = "1") int page,
         @RequestParam(defaultValue = "" + DEFAULT_PAGE_SIZE) int pageSize
     ){

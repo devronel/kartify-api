@@ -17,14 +17,17 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.kartify.api.category.entity.Category;
 import com.kartify.api.category.repository.CategoryRepository;
+import com.kartify.api.category.service.CategoryService;
 import com.kartify.api.contract.FileStorage;
 import com.kartify.api.exception.FieldValidationException;
 import com.kartify.api.exception.ResourceNotFoundException;
+import com.kartify.api.product.dto.CategoryFilterResponse;
 import com.kartify.api.product.dto.ProductAdminListResponse;
 import com.kartify.api.product.dto.ProductAttributeValueResponse;
 import com.kartify.api.product.dto.ProductAttributeWithValueResponse;
@@ -51,6 +54,7 @@ import com.kartify.api.product.entity.ProductVariant;
 import com.kartify.api.product.repository.ProductAttributeValueRepository;
 import com.kartify.api.product.repository.ProductFileRepository;
 import com.kartify.api.product.repository.ProductRepository;
+import com.kartify.api.product.repository.ProductSpecifications;
 import com.kartify.api.product.repository.ProductVariantRepository;
 import com.kartify.api.shared.dto.PaginationResponse;
 import com.kartify.api.shared.dto.UploadedFileResponse;
@@ -66,6 +70,7 @@ public class ProductService {
     private final ProductVariantRepository productVariantRepository;
     private final ProductAttributeValueRepository productAttributeValueRepository;
     private final CategoryRepository categoryRepository;
+    private final CategoryService categoryService;
     private final FileStorage fileStorage;
 
     public ProductService(
@@ -74,6 +79,7 @@ public class ProductService {
         ProductVariantRepository productVariantRepository,
         ProductAttributeValueRepository productAttributeValueRepository,
         CategoryRepository categoryRepository,
+        CategoryService categoryService,
         FileStorage fileStorage
     ){
         this.productRepository = productRepository;
@@ -81,22 +87,22 @@ public class ProductService {
         this.productVariantRepository = productVariantRepository;
         this.productAttributeValueRepository = productAttributeValueRepository;
         this.categoryRepository = categoryRepository;
+        this.categoryService = categoryService;
         this.fileStorage = fileStorage;
     }
 
     // --- Get all Product with Pagination ---
     public PaginationResponse<ProductAdminListResponse> getAll(String search, Pageable pageable){
 
-        // Get all the paginated products
-        Page<Product> productPage;
+        Specification<Product> spec = null;
 
-
-        if(search == null || search.isBlank()){
-            productPage = productRepository.findAll(pageable);
-        }else{
-            productPage = productRepository.search(search, pageable);
+        if (search != null && !search.isBlank()) {
+            spec = ProductSpecifications.keyword(search);
         }
 
+        // Get all the paginated products
+        Page<Product> productPage = productRepository.findAll(spec, pageable);
+        
 
         // Get paginated product content
         List<Product> products = productPage.getContent();
@@ -691,13 +697,26 @@ public class ProductService {
     // --------------- Public --------------------
 
     // --- Get all products ---
-    public PaginationResponse<PublicProductResponse> getAllActive(Pageable pageable){
+    public PaginationResponse<PublicProductResponse> getAllActive(String search, String categorySlug, Pageable pageable){
+
+        Specification<Product> spec = Specification.where(ProductSpecifications.isActive());
+
+        if (search != null && !search.isBlank()) {
+            spec = spec.and(ProductSpecifications.keyword(search));
+        }
+
+        if (categorySlug != null && !categorySlug.isBlank()) {
+
+            Category category = categoryRepository.findBySlug(categorySlug)
+                .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
+
+            List<Long> categoryIds = categoryService.collectCategoryAndChildIds(category);
+
+            spec = spec.and(ProductSpecifications.hasCategories(categoryIds));
+        }
 
         // Get all the paginated products
-        Page<Product> productPage;
-
-
-        productPage = productRepository.findAllActive(pageable);
+        Page<Product> productPage = productRepository.findAll(spec, pageable);
 
 
         // Get paginated product content
@@ -869,10 +888,38 @@ public class ProductService {
     }
 
 
+    // --- Get category for filter product ---
+    public List<CategoryFilterResponse> getCategoryFiltersForStorefront() {
+        List<Category> topLevelCategories = categoryRepository.findAllTopLevel();
+        return topLevelCategories.stream()
+            .map(this::toCategoryFilterResponse)
+            .toList();
+    }
+
     // --------------- Public --------------------
 
 
-    // --- Helper Function ---
+    
+    // ---------------- Helper Function ----------------
+
+    private CategoryFilterResponse toCategoryFilterResponse(Category category) {
+        List<CategoryFilterResponse> children = category.getChildren().stream()
+            .map(this::toCategoryFilterResponse)
+            .toList();
+
+        List<Long> descendantIds = categoryService.collectCategoryAndChildIds(category);
+        Integer cumulativeCount = productRepository.countByCategoryIdIn(descendantIds);
+
+        return new CategoryFilterResponse(
+            category.getId(),
+            category.getName(),
+            category.getSlug(),
+            cumulativeCount,
+            children
+        );
+    }
+
+
     private ProductResponse toResponse(Product product){
         return new ProductResponse(
             product.getName(),
@@ -891,6 +938,7 @@ public class ProductService {
         );
     }
 
+
     // --- Generate unique slug ---
     private String generateUniquesSlug(String name){
         String baseSlug = SlugUtil.toSlug(name);
@@ -905,10 +953,13 @@ public class ProductService {
         return slug;
     }
 
+
     // --- Resolve slug ---
     private String resolveSlug(String slug, String name) {
         String base = (slug != null && slug.isBlank()) ? slug : name;
         return generateUniquesSlug(base);
     }
 
+
+    // ---------------- Helper Function ----------------
 }

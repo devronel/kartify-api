@@ -1,5 +1,6 @@
 package com.kartify.api.category.service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -137,6 +138,22 @@ public class CategoryService {
             .stream().map(this::toTreeResponse).toList();
     }
 
+
+    // -------------------- Helper -------------------------------
+
+    public List<Long> collectCategoryAndChildIds(Category category) {
+        List<Long> ids = new ArrayList<>();
+        
+        ids.add(category.getId());
+
+        for (Category child : category.getChildren()) {
+            ids.addAll(collectCategoryAndChildIds(child));
+        }
+
+        return ids;
+    }
+    
+
     // --- Create Tree category responsive using recursive ---
     private CategoryTreeResponse toTreeResponse(Category category) {
         List<CategoryTreeResponse> children = category.getChildren().stream()
@@ -195,5 +212,7 @@ public class CategoryService {
 
         return slug;
     }
+
+    // -------------------- Helper -------------------------------
 
 }
