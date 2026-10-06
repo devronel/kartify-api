@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.kartify.api.cart.entity.Cart;
 import com.kartify.api.shared.BaseEntity;
 import com.kartify.api.user.enums.Role;
 import com.kartify.api.user.enums.UserStatus;
@@ -30,6 +31,9 @@ public class User extends BaseEntity {
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private UserDetail detail;
+
+    @OneToOne(mappedBy = "user")
+    private Cart cart;
 
     @OneToMany(
         mappedBy = "user",           // Refers to the 'user' field in UserFile entity
