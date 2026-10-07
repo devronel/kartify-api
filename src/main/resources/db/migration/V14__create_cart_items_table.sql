@@ -13,6 +13,4 @@ CREATE TABLE cart_items (
     CONSTRAINT fk_cart_items_product_variant FOREIGN KEY (product_variant_id) REFERENCES product_variants(id)
 );
 
-CREATE INDEX idx_c_items_cart_id ON cart_items(cart_id);
-CREATE INDEX idx_c_items_product_id ON cart_items(product_id);
-CREATE INDEX idx_c_items_product_variant_id ON cart_items(product_variant_id);
+CREATE INDEX idx_cart_items_lookup ON cart_items(cart_id, product_id, product_variant_id);
