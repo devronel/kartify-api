@@ -1,8 +1,11 @@
 package com.kartify.api.cart.service;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import com.kartify.api.cart.dto.CartItemCreateRequest;
@@ -19,6 +22,7 @@ import com.kartify.api.product.entity.Product;
 import com.kartify.api.product.entity.ProductVariant;
 import com.kartify.api.product.repository.ProductRepository;
 import com.kartify.api.product.repository.ProductVariantRepository;
+import com.kartify.api.shared.dto.PaginationResponse;
 import com.kartify.api.user.entity.User;
 import com.kartify.api.user.repository.UserRepository;
 
@@ -132,7 +136,44 @@ public class CartService {
 
     }
 
-    // Creating Response
+  
+  // Get all the item in the cart
+  public PaginationResponse<CartItemResponse> getAllItems(Long userId, Pageable pageable){
+
+    User user = userRepository.findById(userId)
+      .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+    if(user.getCart() == null){
+      return new PaginationResponse<>(
+        List.of(),
+        pageable.getPageNumber(),
+        pageable.getPageSize(),
+        0,
+        0,
+        false,
+        false
+      );
+    }
+    
+    Page<CartItem> cartItemPage = cartItemRepository.findAllByCartId(user.getCart().getId(), pageable);
+
+    List<CartItemResponse> cartItems = cartItemPage.getContent().stream()
+      .map(item -> toResponse(item))
+      .toList();
+
+    return new PaginationResponse<>(
+      cartItems,
+      cartItemPage.getNumber() + 1,
+      cartItemPage.getSize(),
+      cartItemPage.getTotalElements(),
+      cartItemPage.getTotalPages(),
+      cartItemPage.hasNext(),
+      cartItemPage.hasPrevious()
+    );
+  }
+
+
+  // Creating Response
   private CartItemResponse toResponse(CartItem cartItem){
 
     String filename = cartItem.getProduct().getFiles().stream()

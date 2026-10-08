@@ -89,6 +89,8 @@ public class User extends BaseEntity {
         this.detail = detail;
     }
 
+    public Cart getCart(){ return cart; }
+
     public List<UserFile> getFiles() { return files; }
     public void addFile(UserFile file) {
         files.add(file);
