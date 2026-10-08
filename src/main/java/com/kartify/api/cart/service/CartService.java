@@ -16,7 +16,6 @@ import com.kartify.api.contract.FileStorage;
 import com.kartify.api.exception.FieldValidationException;
 import com.kartify.api.exception.ResourceNotFoundException;
 import com.kartify.api.product.entity.Product;
-import com.kartify.api.product.entity.ProductFile;
 import com.kartify.api.product.entity.ProductVariant;
 import com.kartify.api.product.repository.ProductRepository;
 import com.kartify.api.product.repository.ProductVariantRepository;
@@ -134,30 +133,30 @@ public class CartService {
     }
 
     // Creating Response
-    private CartItemResponse toResponse(CartItem cartItem){
+  private CartItemResponse toResponse(CartItem cartItem){
 
-      String filename = cartItem.getProduct().getFiles().stream()
-        .filter(file -> Boolean.TRUE.equals(file.getIsPrimary()))
-        .map(file -> file.getFilename())
-        .findFirst()
-        .orElse(null);
+    String filename = cartItem.getProduct().getFiles().stream()
+      .filter(file -> Boolean.TRUE.equals(file.getIsPrimary()))
+      .map(file -> file.getFilename())
+      .findFirst()
+      .orElse(null);
 
-      Long productVariantId = cartItem.getProductVariant() != null ? cartItem.getProductVariant().getId() : null;
-      String primaryImageUrl = fileStorage.getUrl("files/public/product/images/" + filename);
-      Integer quantity = cartItem.getQuantity();
-      BigDecimal price = cartItem.getPrice();
-      BigDecimal subtotal = price.multiply(BigDecimal.valueOf(quantity));
+    Long productVariantId = cartItem.getProductVariant() != null ? cartItem.getProductVariant().getId() : null;
+    String primaryImageUrl = fileStorage.getUrl("files/public/product/images/" + filename);
+    Integer quantity = cartItem.getQuantity();
+    BigDecimal price = cartItem.getPrice();
+    BigDecimal subtotal = price.multiply(BigDecimal.valueOf(quantity));
 
-      return new CartItemResponse(
-        cartItem.getId(),
-        cartItem.getProduct().getId(),
-        productVariantId,
-        cartItem.getProduct().getName(),
-        primaryImageUrl,
-        quantity,
-        price,
-        subtotal
-      );
-    }
+    return new CartItemResponse(
+      cartItem.getId(),
+      cartItem.getProduct().getId(),
+      productVariantId,
+      cartItem.getProduct().getName(),
+      primaryImageUrl,
+      quantity,
+      price,
+      subtotal
+    );
+  }
 
 }
