@@ -1,5 +1,6 @@
 package com.kartify.api.cart.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.domain.Page;
@@ -24,5 +25,7 @@ public interface CartItemRepository extends JpaRepository<CartItem, Long> {
   );
 
   Page<CartItem> findAllByCartId(Long cartId, Pageable pageable);
+
+  List<CartItem> findAllByCartIdOrderByCreatedAtDesc(Long cartId);
 
 }

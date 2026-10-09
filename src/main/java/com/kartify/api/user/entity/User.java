@@ -90,6 +90,7 @@ public class User extends BaseEntity {
     }
 
     public Cart getCart(){ return cart; }
+    public void setCart(Cart cart) { this.cart = cart; }
 
     public List<UserFile> getFiles() { return files; }
     public void addFile(UserFile file) {

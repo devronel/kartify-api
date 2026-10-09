@@ -7,11 +7,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -19,6 +21,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.kartify.api.cart.dto.CartItemCreateRequest;
+import com.kartify.api.cart.dto.CartResponse;
 import com.kartify.api.cart.entity.Cart;
 import com.kartify.api.cart.entity.CartItem;
 import com.kartify.api.cart.enums.CartStatus;
@@ -87,300 +90,380 @@ public class CartServiceTest {
   }
 
 
-  @Test
-  @DisplayName("Should throw ResourceNotFoundException when user does not exist")
-  void testAddItemIfUserIsNotExist(){
+  @Nested
+  class AddCartItemTests {
+    @Test
+    @DisplayName("Should throw ResourceNotFoundException when user does not exist")
+    void testAddItemIfUserIsNotExist(){
+  
+      when(userRepository.findById(userId))
+        .thenReturn(Optional.empty());
+  
+      Assertions.assertThrows(ResourceNotFoundException.class, () -> {
+        cartService.addItem(userId, request);
+      });
+  
+    }
+  
+    @Test
+    @DisplayName("Should throw ResourceNotFoundException when product does not exist")
+    void testAddItemIfProductIsNotExist(){
+  
+      User user = new User();
+  
+      when(userRepository.findById(userId))
+        .thenReturn(Optional.of(user));
+  
+      when(productRepository.findById(productId))
+        .thenReturn(Optional.empty());
+  
+      Assertions.assertThrows(ResourceNotFoundException.class, () -> {
+        cartService.addItem(userId, request);
+      });
+  
+    }
+  
+  
+    @Test
+    @DisplayName("Should throw ResourceNotFoundException when product variant does not exist")
+    void testAddItemIfProductVariantIsNotExist(){
+  
+      request = new CartItemCreateRequest(1L, 1L, 3);
+  
+      User user = new User();
+      Product product = new Product();
+  
+      when(userRepository.findById(userId))
+        .thenReturn(Optional.of(user));
+  
+      when(productRepository.findById(productId))
+        .thenReturn(Optional.of(product));
+  
+      when(productVariantRepository.findByIdAndProductId(request.productVariantId(), request.productId()))
+        .thenReturn(Optional.empty());
+  
+      Assertions.assertThrows(ResourceNotFoundException.class, () -> {
+        cartService.addItem(userId, request);
+      });
+  
+    }
+  
+  
+    @Test
+    @DisplayName("Should use existing cart when user already has a cart")
+    void testAddItemIfUserAlreadyHasCart() {
+  
+      // Arrange
+      request = new CartItemCreateRequest(1L, 1L, 3);
+  
+      User user = new User();
+  
+      Product product = new Product();
+      product.setStockQuantity(10);
+  
+      ProductVariant variant = new ProductVariant();
+      variant.setStockQuantity(10);
+      variant.setPrice(BigDecimal.valueOf(100));
+  
+      Cart cart = new Cart();
+      cart.setUser(user);
+      cart.setStatus(CartStatus.ACTIVE);
+  
+      CartItem savedCartItem = new CartItem();
+      savedCartItem.setCart(cart);
+      savedCartItem.setProduct(product);
+      savedCartItem.setProductVariant(variant);
+      savedCartItem.setQuantity(request.quantity());
+      savedCartItem.setPrice(variant.getPrice());
+  
+      when(userRepository.findById(userId))
+        .thenReturn(Optional.of(user));
+  
+      when(productRepository.findById(request.productId()))
+        .thenReturn(Optional.of(product));
+  
+      when(productVariantRepository.findByIdAndProductId(
+        request.productVariantId(),
+        request.productId()
+      )).thenReturn(Optional.of(variant));
+  
+      when(cartRepository.findByUserId(user.getId()))
+        .thenReturn(Optional.of(cart));
+  
+      when(cartItemRepository.findByCartIdAndProductIdAndProductVariantId(
+        cart.getId(),
+        request.productId(),
+        request.productVariantId()
+      )).thenReturn(Optional.empty());
+  
+      when(cartItemRepository.save(any(CartItem.class)))
+        .thenReturn(savedCartItem);
+  
+      when(fileStorage.getUrl(anyString()))
+        .thenReturn("http://localhost/test-image.jpg");
+  
+      // Act
+      cartService.addItem(userId, request);
+  
+      // Assert
+      verify(cartRepository, never()).save(any(Cart.class));
+    }
+  
+  
+    @Test
+    @DisplayName("Should create new cart when user don't have cart")
+    void testAddItemIfUserDontHaveCart() {
+  
+      // Arrange
+      request = new CartItemCreateRequest(1L, 1L, 3);
+  
+      User user = new User();
+  
+      Product product = new Product();
+      product.setStockQuantity(10);
+  
+      ProductVariant variant = new ProductVariant();
+      variant.setStockQuantity(10);
+      variant.setPrice(BigDecimal.valueOf(100));
+  
+      Cart cart = new Cart();
+      cart.setUser(user);
+      cart.setStatus(CartStatus.ACTIVE);
+  
+      CartItem savedCartItem = new CartItem();
+      savedCartItem.setCart(cart);
+      savedCartItem.setProduct(product);
+      savedCartItem.setProductVariant(variant);
+      savedCartItem.setQuantity(request.quantity());
+      savedCartItem.setPrice(variant.getPrice());
+  
+      when(userRepository.findById(userId))
+        .thenReturn(Optional.of(user));
+  
+      when(productRepository.findById(request.productId()))
+        .thenReturn(Optional.of(product));
+  
+      when(productVariantRepository.findByIdAndProductId(
+        request.productVariantId(),
+        request.productId()
+      )).thenReturn(Optional.of(variant));
+  
+      when(cartRepository.findByUserId(user.getId()))
+        .thenReturn(Optional.empty());
+  
+      when(cartRepository.save(any(Cart.class)))
+        .thenReturn(cart);
+  
+      when(cartItemRepository.findByCartIdAndProductIdAndProductVariantId(
+        cart.getId(),
+        request.productId(),
+        request.productVariantId()
+      )).thenReturn(Optional.empty());
+  
+      when(cartItemRepository.save(any(CartItem.class)))
+        .thenReturn(savedCartItem);
+  
+      when(fileStorage.getUrl(anyString()))
+        .thenReturn("http://localhost/test-image.jpg");
+  
+      // Act
+      cartService.addItem(userId, request);
+  
+      // Assert
+      verify(cartRepository).save(any(Cart.class));
+    }
+  
+  
+    @Test
+    @DisplayName("Should make the cart status ACTIVE if it is ABANDONED")
+    void testAddItemMakeTheCartStatusActive() {
+  
+      // Arrange
+      request = new CartItemCreateRequest(1L, 1L, 3);
+  
+      User user = new User();
+  
+      Product product = new Product();
+      product.setStockQuantity(10);
+  
+      ProductVariant variant = new ProductVariant();
+      variant.setStockQuantity(10);
+      variant.setPrice(BigDecimal.valueOf(100));
+  
+      Cart cart = new Cart();
+      cart.setUser(user);
+      cart.setStatus(CartStatus.ABANDONED);
+  
+      CartItem savedCartItem = new CartItem();
+      savedCartItem.setCart(cart);
+      savedCartItem.setProduct(product);
+      savedCartItem.setProductVariant(variant);
+      savedCartItem.setQuantity(request.quantity());
+      savedCartItem.setPrice(variant.getPrice());
+  
+      when(userRepository.findById(userId))
+        .thenReturn(Optional.of(user));
+  
+      when(productRepository.findById(request.productId()))
+        .thenReturn(Optional.of(product));
+  
+      when(productVariantRepository.findByIdAndProductId(
+        request.productVariantId(),
+        request.productId()
+      )).thenReturn(Optional.of(variant));
+  
+      when(cartRepository.findByUserId(user.getId()))
+        .thenReturn(Optional.of(cart));
+  
+      when(cartItemRepository.findByCartIdAndProductIdAndProductVariantId(
+        cart.getId(),
+        request.productId(),
+        request.productVariantId()
+      )).thenReturn(Optional.empty());
+  
+      when(cartItemRepository.save(any(CartItem.class)))
+        .thenReturn(savedCartItem);
+  
+      when(fileStorage.getUrl(anyString()))
+        .thenReturn("http://localhost/test-image.jpg");
+  
+      // Act
+      cartService.addItem(userId, request);
+  
+      // Assert
+      verify(cartRepository).save(any(Cart.class));
+      Assertions.assertEquals(CartStatus.ACTIVE, cart.getStatus());
+    }
+  
+    @Test
+    @DisplayName("Should throw FieldValidationException if the quantity is greater than from available stock")
+    void testAddItemQuantityGreaterThanAvailableStock() {
+  
+      // Arrange
+      request = new CartItemCreateRequest(1L, 1L, 3);
+  
+      User user = new User();
+  
+      Product product = new Product();
+      product.setStockQuantity(0);
+  
+      ProductVariant variant = new ProductVariant();
+      variant.setStockQuantity(0);
+      variant.setPrice(BigDecimal.valueOf(100));
+  
+      Cart cart = new Cart();
+      cart.setUser(user);
+      cart.setStatus(CartStatus.ACTIVE);
+  
+      CartItem savedCartItem = new CartItem();
+      savedCartItem.setCart(cart);
+      savedCartItem.setProduct(product);
+      savedCartItem.setProductVariant(variant);
+      savedCartItem.setQuantity(request.quantity());
+      savedCartItem.setPrice(variant.getPrice());
+  
+      when(userRepository.findById(userId))
+        .thenReturn(Optional.of(user));
+  
+      when(productRepository.findById(request.productId()))
+        .thenReturn(Optional.of(product));
+  
+      when(productVariantRepository.findByIdAndProductId(
+        request.productVariantId(),
+        request.productId()
+      )).thenReturn(Optional.of(variant));
+  
+      when(cartRepository.findByUserId(user.getId()))
+        .thenReturn(Optional.of(cart));
+  
+      when(cartItemRepository.findByCartIdAndProductIdAndProductVariantId(
+        cart.getId(),
+        request.productId(),
+        request.productVariantId()
+      )).thenReturn(Optional.empty());
+  
+      // Assert
+      Assertions.assertThrows(FieldValidationException.class, () -> {
+        cartService.addItem(userId, request);
+      });
+    }
+  }
 
-    when(userRepository.findById(userId))
+  // Get Item in the cart
+  @Nested
+  class GetCartItemTests {
+
+    @Test
+    @DisplayName("Should throw ResourceNotFoundException if user didn't exists")
+    void getCartItem_IfUserNotExists() {
+
+      when(userRepository.findById(userId))
       .thenReturn(Optional.empty());
 
-    Assertions.assertThrows(ResourceNotFoundException.class, () -> {
-      cartService.addItem(userId, request);
-    });
+      Assertions.assertThrows(ResourceNotFoundException.class, () -> {
+        cartService.getAllItems(userId);
+      });
 
-  }
+    }
 
-  @Test
-  @DisplayName("Should throw ResourceNotFoundException when product does not exist")
-  void testAddItemIfProductIsNotExist(){
 
-    User user = new User();
+    @Test
+    @DisplayName("Should return empty payload when user has no cart")
+    void getCartItem_ShouldReturnEmptyPayload() {
 
-    when(userRepository.findById(userId))
+      when(userRepository.findById(userId))
+      .thenReturn(Optional.of(new User()));
+
+      CartResponse cartItems = cartService.getAllItems(userId);
+
+      Assertions.assertNotNull(cartItems);
+      Assertions.assertEquals(0, cartItems.items().size());
+
+    }
+
+
+    @Test
+    @DisplayName("Should return data when user have cart and cart items")
+    void getCartItem_ShouldReturnData() {
+
+      User user = new User();
+
+      Product product = new Product();
+
+      Cart cart = new Cart();
+      cart.setUser(user);
+      user.setCart(cart);
+
+      CartItem cartItem = new CartItem();
+      cartItem.setQuantity(3);
+      cartItem.setPrice(BigDecimal.valueOf(100));
+      cartItem.setCart(cart);
+      cartItem.setProduct(product);
+
+
+      List<CartItem> itemLists = List.of(cartItem);
+
+
+      when(userRepository.findById(userId))
       .thenReturn(Optional.of(user));
 
-    when(productRepository.findById(productId))
-      .thenReturn(Optional.empty());
 
-    Assertions.assertThrows(ResourceNotFoundException.class, () -> {
-      cartService.addItem(userId, request);
-    });
-
-  }
+      when(cartItemRepository.findAllByCartIdOrderByCreatedAtDesc(cart.getId()))
+        .thenReturn(itemLists);
 
 
-  @Test
-  @DisplayName("Should throw ResourceNotFoundException when product variant does not exist")
-  void testAddItemIfProductVariantIsNotExist(){
+      when(fileStorage.getUrl(anyString()))
+        .thenReturn("http://localhost/test-image.jpg");
 
-    request = new CartItemCreateRequest(1L, 1L, 3);
+        
+      CartResponse cartItems = cartService.getAllItems(userId);
 
-    User user = new User();
-    Product product = new Product();
+      Assertions.assertNotNull(cartItems);
+      Assertions.assertEquals(1, cartItems.items().size());
 
-    when(userRepository.findById(userId))
-      .thenReturn(Optional.of(user));
-
-    when(productRepository.findById(productId))
-      .thenReturn(Optional.of(product));
-
-    when(productVariantRepository.findByIdAndProductId(request.productVariantId(), request.productId()))
-      .thenReturn(Optional.empty());
-
-    Assertions.assertThrows(ResourceNotFoundException.class, () -> {
-      cartService.addItem(userId, request);
-    });
+    }
 
   }
 
-
-  @Test
-  @DisplayName("Should use existing cart when user already has a cart")
-  void testAddItemIfUserAlreadyHasCart() {
-
-    // Arrange
-    request = new CartItemCreateRequest(1L, 1L, 3);
-
-    User user = new User();
-
-    Product product = new Product();
-    product.setStockQuantity(10);
-
-    ProductVariant variant = new ProductVariant();
-    variant.setStockQuantity(10);
-    variant.setPrice(BigDecimal.valueOf(100));
-
-    Cart cart = new Cart();
-    cart.setUser(user);
-    cart.setStatus(CartStatus.ACTIVE);
-
-    CartItem savedCartItem = new CartItem();
-    savedCartItem.setCart(cart);
-    savedCartItem.setProduct(product);
-    savedCartItem.setProductVariant(variant);
-    savedCartItem.setQuantity(request.quantity());
-    savedCartItem.setPrice(variant.getPrice());
-
-    when(userRepository.findById(userId))
-      .thenReturn(Optional.of(user));
-
-    when(productRepository.findById(request.productId()))
-      .thenReturn(Optional.of(product));
-
-    when(productVariantRepository.findByIdAndProductId(
-      request.productVariantId(),
-      request.productId()
-    )).thenReturn(Optional.of(variant));
-
-    when(cartRepository.findByUserId(user.getId()))
-      .thenReturn(Optional.of(cart));
-
-    when(cartItemRepository.findByCartIdAndProductIdAndProductVariantId(
-      cart.getId(),
-      request.productId(),
-      request.productVariantId()
-    )).thenReturn(Optional.empty());
-
-    when(cartItemRepository.save(any(CartItem.class)))
-      .thenReturn(savedCartItem);
-
-    when(fileStorage.getUrl(anyString()))
-      .thenReturn("http://localhost/test-image.jpg");
-
-    // Act
-    cartService.addItem(userId, request);
-
-    // Assert
-    verify(cartRepository, never()).save(any(Cart.class));
-  }
-
-
-  @Test
-  @DisplayName("Should create new cart when user don't have cart")
-  void testAddItemIfUserDontHaveCart() {
-
-    // Arrange
-    request = new CartItemCreateRequest(1L, 1L, 3);
-
-    User user = new User();
-
-    Product product = new Product();
-    product.setStockQuantity(10);
-
-    ProductVariant variant = new ProductVariant();
-    variant.setStockQuantity(10);
-    variant.setPrice(BigDecimal.valueOf(100));
-
-    Cart cart = new Cart();
-    cart.setUser(user);
-    cart.setStatus(CartStatus.ACTIVE);
-
-    CartItem savedCartItem = new CartItem();
-    savedCartItem.setCart(cart);
-    savedCartItem.setProduct(product);
-    savedCartItem.setProductVariant(variant);
-    savedCartItem.setQuantity(request.quantity());
-    savedCartItem.setPrice(variant.getPrice());
-
-    when(userRepository.findById(userId))
-      .thenReturn(Optional.of(user));
-
-    when(productRepository.findById(request.productId()))
-      .thenReturn(Optional.of(product));
-
-    when(productVariantRepository.findByIdAndProductId(
-      request.productVariantId(),
-      request.productId()
-    )).thenReturn(Optional.of(variant));
-
-    when(cartRepository.findByUserId(user.getId()))
-      .thenReturn(Optional.empty());
-
-    when(cartRepository.save(any(Cart.class)))
-      .thenReturn(cart);
-
-    when(cartItemRepository.findByCartIdAndProductIdAndProductVariantId(
-      cart.getId(),
-      request.productId(),
-      request.productVariantId()
-    )).thenReturn(Optional.empty());
-
-    when(cartItemRepository.save(any(CartItem.class)))
-      .thenReturn(savedCartItem);
-
-    when(fileStorage.getUrl(anyString()))
-      .thenReturn("http://localhost/test-image.jpg");
-
-    // Act
-    cartService.addItem(userId, request);
-
-    // Assert
-    verify(cartRepository).save(any(Cart.class));
-  }
-
-
-  @Test
-  @DisplayName("Should make the cart status ACTIVE if it is ABANDONED")
-  void testAddItemMakeTheCartStatusActive() {
-
-    // Arrange
-    request = new CartItemCreateRequest(1L, 1L, 3);
-
-    User user = new User();
-
-    Product product = new Product();
-    product.setStockQuantity(10);
-
-    ProductVariant variant = new ProductVariant();
-    variant.setStockQuantity(10);
-    variant.setPrice(BigDecimal.valueOf(100));
-
-    Cart cart = new Cart();
-    cart.setUser(user);
-    cart.setStatus(CartStatus.ABANDONED);
-
-    CartItem savedCartItem = new CartItem();
-    savedCartItem.setCart(cart);
-    savedCartItem.setProduct(product);
-    savedCartItem.setProductVariant(variant);
-    savedCartItem.setQuantity(request.quantity());
-    savedCartItem.setPrice(variant.getPrice());
-
-    when(userRepository.findById(userId))
-      .thenReturn(Optional.of(user));
-
-    when(productRepository.findById(request.productId()))
-      .thenReturn(Optional.of(product));
-
-    when(productVariantRepository.findByIdAndProductId(
-      request.productVariantId(),
-      request.productId()
-    )).thenReturn(Optional.of(variant));
-
-    when(cartRepository.findByUserId(user.getId()))
-      .thenReturn(Optional.of(cart));
-
-    when(cartItemRepository.findByCartIdAndProductIdAndProductVariantId(
-      cart.getId(),
-      request.productId(),
-      request.productVariantId()
-    )).thenReturn(Optional.empty());
-
-    when(cartItemRepository.save(any(CartItem.class)))
-      .thenReturn(savedCartItem);
-
-    when(fileStorage.getUrl(anyString()))
-      .thenReturn("http://localhost/test-image.jpg");
-
-    // Act
-    cartService.addItem(userId, request);
-
-    // Assert
-    verify(cartRepository).save(any(Cart.class));
-    Assertions.assertEquals(CartStatus.ACTIVE, cart.getStatus());
-  }
-
-  @Test
-  @DisplayName("Should throw FieldValidationException if the quantity is greater than from available stock")
-  void testAddItemQuantityGreaterThanAvailableStock() {
-
-    // Arrange
-    request = new CartItemCreateRequest(1L, 1L, 3);
-
-    User user = new User();
-
-    Product product = new Product();
-    product.setStockQuantity(0);
-
-    ProductVariant variant = new ProductVariant();
-    variant.setStockQuantity(0);
-    variant.setPrice(BigDecimal.valueOf(100));
-
-    Cart cart = new Cart();
-    cart.setUser(user);
-    cart.setStatus(CartStatus.ACTIVE);
-
-    CartItem savedCartItem = new CartItem();
-    savedCartItem.setCart(cart);
-    savedCartItem.setProduct(product);
-    savedCartItem.setProductVariant(variant);
-    savedCartItem.setQuantity(request.quantity());
-    savedCartItem.setPrice(variant.getPrice());
-
-    when(userRepository.findById(userId))
-      .thenReturn(Optional.of(user));
-
-    when(productRepository.findById(request.productId()))
-      .thenReturn(Optional.of(product));
-
-    when(productVariantRepository.findByIdAndProductId(
-      request.productVariantId(),
-      request.productId()
-    )).thenReturn(Optional.of(variant));
-
-    when(cartRepository.findByUserId(user.getId()))
-      .thenReturn(Optional.of(cart));
-
-    when(cartItemRepository.findByCartIdAndProductIdAndProductVariantId(
-      cart.getId(),
-      request.productId(),
-      request.productVariantId()
-    )).thenReturn(Optional.empty());
-
-    // Assert
-    Assertions.assertThrows(FieldValidationException.class, () -> {
-      cartService.addItem(userId, request);
-    });
-  }
 
 }
