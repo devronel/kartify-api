@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -14,6 +16,9 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
     
     // --- Handles @Valid failures (e.g. missing firstName, invalid email) ---
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -41,10 +46,12 @@ public class GlobalExceptionHandler {
         return ResponseEntity.unprocessableContent().body(body);
     }
 
+
     // --- Custom Exception That Carries the Field Name ---
     @ExceptionHandler(FieldValidationException.class)
     public ResponseEntity<Map<String, Object>> handleFieldValidation(FieldValidationException ex) {
         Map<String, String> fieldErrors = new HashMap<>();
+        
         fieldErrors.put(ex.getField(), ex.getMessage());
 
         Map<String, Object> body = new HashMap<>();
@@ -56,9 +63,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity.unprocessableContent().body(body);
     }
 
+
     // --- Handles your custom errors, e.g. "Email is already registered" ---
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, Object>> handleIllegalArgument(IllegalArgumentException ex) {
+        
+        log.warn("Invalid argument", ex);
+
         Map<String, Object> body = new HashMap<>();
         body.put("timestamp", LocalDateTime.now());
         body.put("status", HttpStatus.BAD_REQUEST.value());
@@ -66,23 +77,29 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.badRequest().body(body);
     }
+
 
     // --- Catch-all fallback for anything unexpected ---
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneric(Exception ex) {
-        System.out.println(ex.getMessage());
+        
+        log.warn("Unexpected server error occurred", ex);
+        
         Map<String, Object> body = new HashMap<>();
         body.put("timestamp", LocalDateTime.now());
         body.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
-        body.put("error", ex.getMessage());
-        body.put("trace", ex.toString());
+        body.put("error", "An unexpected error occurred.");
 
         return ResponseEntity.internalServerError().body(body);
     }
 
+
     // --- Exception Handler for Invalid Token ---
     @ExceptionHandler(PasswordResetException.class)
     public ResponseEntity<Map<String, Object>> handlePasswordResetException(PasswordResetException ex) {
+
+        log.warn("Password Reset Problem", ex);
+
         Map<String, Object> body = new HashMap<>();
         body.put("timestamp", LocalDateTime.now());
         body.put("status", HttpStatus.BAD_REQUEST.value());
@@ -90,8 +107,12 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(body);
     }
 
+
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<Map<String, Object>> handleResourceNotFound(ResourceNotFoundException ex) {
+
+        log.warn("Resource Not Found", ex);
+
         Map<String, Object> body = new HashMap<>();
         body.put("timestamp", LocalDateTime.now());
         body.put("status", HttpStatus.NOT_FOUND.value());
@@ -99,5 +120,20 @@ public class GlobalExceptionHandler {
         body.put("trace", ex.toString());
 
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
+    }
+
+
+    @ExceptionHandler(InsufficientStockException.class)
+    public ResponseEntity<Map<String, Object>> handleInsufficientStock(InsufficientStockException ex) {
+
+        log.warn("Insufficient Stock", ex);
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", HttpStatus.CONFLICT.value());
+        body.put("message", ex.getMessage());
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+
     }
 }

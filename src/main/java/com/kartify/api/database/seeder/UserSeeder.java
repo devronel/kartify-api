@@ -1,6 +1,7 @@
 package com.kartify.api.database.seeder;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
@@ -31,6 +32,7 @@ public class UserSeeder implements CommandLineRunner {
 
     private void loadSeedData() {
         
+        // Admin
         User admin = new User();
         admin.setEmail("admin@email.com");
         admin.setEmailVerifiedAt(LocalDateTime.now());
@@ -38,14 +40,30 @@ public class UserSeeder implements CommandLineRunner {
         admin.setRole(Role.ADMIN);
         admin.setStatus(UserStatus.ACTIVE);
 
-        UserDetail userDetail = new UserDetail();
-        userDetail.setFirstName("Kartify");
-        userDetail.setLastName("Administrator");
-        userDetail.setUser(admin);
+        UserDetail adminDetail = new UserDetail();
+        adminDetail.setFirstName("Tony");
+        adminDetail.setLastName("Stark");
+        adminDetail.setUser(admin);
 
-        admin.setUserDetail(userDetail);
+        admin.setUserDetail(adminDetail);
 
-        userRepository.save(admin);
+        
+        // Customer
+        User client = new User();
+        client.setEmail("customer01@email.com");
+        client.setEmailVerifiedAt(LocalDateTime.now());
+        client.setPassword(passwordEncoder.encode("password"));
+        client.setRole(Role.CUSTOMER);
+        client.setStatus(UserStatus.ACTIVE);
+
+        UserDetail customerDetail = new UserDetail();
+        customerDetail.setFirstName("Stephen");
+        customerDetail.setLastName("Strange");
+        customerDetail.setUser(client);
+
+        client.setUserDetail(customerDetail);
+
+        userRepository.saveAll(List.of(admin, client));
 
         System.out.println("Database successfully seeded admin account!");
     }

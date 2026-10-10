@@ -8,5 +8,6 @@ public record PublicVariantResponse(
   List<Long> attributeValueIds,
   String sku,
   BigDecimal price,
-  Boolean inStock
+  Boolean inStock,
+  Integer stockQuantity
 ) {}

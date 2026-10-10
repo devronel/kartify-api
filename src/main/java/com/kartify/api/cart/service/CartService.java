@@ -4,6 +4,8 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import com.kartify.api.cart.dto.CartItemCreateRequest;
@@ -16,6 +18,7 @@ import com.kartify.api.cart.repository.CartItemRepository;
 import com.kartify.api.cart.repository.CartRepository;
 import com.kartify.api.contract.FileStorage;
 import com.kartify.api.exception.FieldValidationException;
+import com.kartify.api.exception.InsufficientStockException;
 import com.kartify.api.exception.ResourceNotFoundException;
 import com.kartify.api.product.entity.Product;
 import com.kartify.api.product.entity.ProductVariant;
@@ -26,6 +29,8 @@ import com.kartify.api.user.repository.UserRepository;
 
 @Service
 public class CartService {
+
+  private static final Logger log = LoggerFactory.getLogger(CartService.class);
 
   private final CartRepository cartRepository;
   private final CartItemRepository cartItemRepository;
@@ -98,16 +103,18 @@ public class CartService {
 
 
       // Determine available stock (variant-level if applicable, otherwise product-level)
-      Integer availableStock = (variant != null) ? variant.getStockQuantity() : product.getStockQuantity();
+      Integer availableStock = variant != null ? variant.getStockQuantity() : product.getStockQuantity();
+
 
       CartItem saved;
 
+      
       if (cartItem.isPresent()) {
         CartItem existing = cartItem.get();
         int newQuantity = existing.getQuantity() + payload.quantity();
 
         if (newQuantity > availableStock) {
-            throw new FieldValidationException("quantity", "Not enough stock available.");
+            throw new InsufficientStockException("Not enough stock available.");
         }
 
         existing.setQuantity(newQuantity);
@@ -115,7 +122,7 @@ public class CartService {
 
       } else {
         if (payload.quantity() > availableStock) {
-            throw new FieldValidationException("quantity", "Not enough stock available.");
+          throw new InsufficientStockException("Not enough stock available.");
         }
 
         CartItem newItem = new CartItem();

@@ -31,7 +31,6 @@ import com.kartify.api.product.dto.CategoryFilterResponse;
 import com.kartify.api.product.dto.ProductAdminListResponse;
 import com.kartify.api.product.dto.ProductAttributeValueResponse;
 import com.kartify.api.product.dto.ProductAttributeWithValueResponse;
-import com.kartify.api.product.dto.ProductCategoryResponse;
 import com.kartify.api.product.dto.ProductCreateRequest;
 import com.kartify.api.product.dto.ProductEditFileResponse;
 import com.kartify.api.product.dto.ProductEditResponse;
@@ -812,7 +811,8 @@ public class ProductService {
                         attributeValueIds,
                         variant.getSku(),
                         variant.getPrice(),
-                        inStock
+                        inStock,
+                        variant.getStockQuantity()
                     );
                 })
                 .toList();
