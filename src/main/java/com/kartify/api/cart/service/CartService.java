@@ -67,6 +67,11 @@ public class CartService {
       .orElseThrow(() -> new ResourceNotFoundException("Product not found."));
       
 
+    if(Boolean.TRUE.equals(product.getHasVariants()) && payload.productVariantId() == null){
+      throw new FieldValidationException("productVariantId", "Please select a product option.");
+    }
+
+
     ProductVariant variant = null;
 
 
@@ -171,6 +176,19 @@ public class CartService {
 
   }
 
+
+  // Remove item from the cart
+  public void removeItem(Long userId, Long cartItemId){
+
+    Cart cart = cartRepository.findByUserId(userId)
+      .orElseThrow(() -> new ResourceNotFoundException("Cart not found"));
+
+    CartItem cartItem = cartItemRepository.findByIdAndCartId(cartItemId, cart.getId())
+      .orElseThrow(() -> new ResourceNotFoundException("item not found in the cart"));
+
+    cartItemRepository.delete(cartItem);
+
+  }
 
   // Creating Response
   private CartItemResponse toResponse(CartItem cartItem){

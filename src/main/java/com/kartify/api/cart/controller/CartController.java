@@ -3,7 +3,9 @@ package com.kartify.api.cart.controller;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -39,6 +41,7 @@ public class CartController {
   }
 
 
+  // Add new item in the cart
   @PostMapping
   public ResponseEntity<CartItemResponse> addItem(@AuthenticationPrincipal CustomUserDetails principal, @Valid @RequestBody CartItemCreateRequest request) {
 
@@ -49,6 +52,7 @@ public class CartController {
   }
 
 
+  // Get all cart items
   @GetMapping
   public ResponseEntity<CartResponse> getAllItem(
     @AuthenticationPrincipal CustomUserDetails principal
@@ -57,6 +61,20 @@ public class CartController {
     CartResponse cartItem = cartService.getAllItems(principal.getId());
 
     return ResponseEntity.ok(cartItem);
+
+  }
+
+
+  // Remove item from the cart
+  @DeleteMapping("/items/{id}")
+  public ResponseEntity<Void> removeItem(
+    @AuthenticationPrincipal CustomUserDetails principal,
+    @PathVariable Long id
+  ) {
+
+    cartService.removeItem(principal.getId(), id);
+
+    return ResponseEntity.noContent().build();
 
   }
 

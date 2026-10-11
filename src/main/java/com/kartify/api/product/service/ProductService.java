@@ -375,6 +375,9 @@ public class ProductService {
 
 
     // --- Update Product including files and variants ---
+    /*
+        TODO: When hasVariants changes in either direction, delete that product’s cart items.
+    */
     @Transactional
     public boolean update(Long id, ProductUpdateRequest payload){
 

@@ -28,7 +28,7 @@ import com.kartify.api.cart.enums.CartStatus;
 import com.kartify.api.cart.repository.CartItemRepository;
 import com.kartify.api.cart.repository.CartRepository;
 import com.kartify.api.contract.FileStorage;
-import com.kartify.api.exception.FieldValidationException;
+import com.kartify.api.exception.InsufficientStockException;
 import com.kartify.api.exception.ResourceNotFoundException;
 import com.kartify.api.product.entity.Product;
 import com.kartify.api.product.entity.ProductVariant;
@@ -336,7 +336,7 @@ public class CartServiceTest {
     }
   
     @Test
-    @DisplayName("Should throw FieldValidationException if the quantity is greater than from available stock")
+    @DisplayName("Should throw InsufficientStockException if the quantity is greater than from available stock")
     void testAddItemQuantityGreaterThanAvailableStock() {
   
       // Arrange
@@ -345,6 +345,7 @@ public class CartServiceTest {
       User user = new User();
   
       Product product = new Product();
+      product.setHasVariants(true);
       product.setStockQuantity(0);
   
       ProductVariant variant = new ProductVariant();
@@ -383,7 +384,7 @@ public class CartServiceTest {
       )).thenReturn(Optional.empty());
   
       // Assert
-      Assertions.assertThrows(FieldValidationException.class, () -> {
+      Assertions.assertThrows(InsufficientStockException.class, () -> {
         cartService.addItem(userId, request);
       });
     }
