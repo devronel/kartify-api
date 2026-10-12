@@ -22,6 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.kartify.api.cart.dto.CartItemCreateRequest;
 import com.kartify.api.cart.dto.CartResponse;
+import com.kartify.api.cart.dto.ItemQuantityUpdateResponse;
 import com.kartify.api.cart.entity.Cart;
 import com.kartify.api.cart.entity.CartItem;
 import com.kartify.api.cart.enums.CartStatus;
@@ -466,5 +467,203 @@ public class CartServiceTest {
 
   }
 
+
+  // Update item quantity
+  @Nested
+  class UpdateCartItemQuantityTest {
+
+    @Test
+    void updateItemQuantity_ShouldThrowException_IfCartNotExist(){
+
+      Long userId = 1L;
+
+      when(cartRepository.findByUserId(userId))
+        .thenReturn(Optional.empty());
+
+      Assertions.assertThrows(ResourceNotFoundException.class, () -> {
+        cartService.updateQuantity(userId, 2L, 20);
+      });
+
+    }
+
+
+    @Test
+    void updateItemQuantity_ShouldThrowException_IfCartItemNotExist(){
+
+      Long userId = 1L;
+      Long cartItemId = 1L;
+
+      Cart cart = new Cart();
+
+      when(cartRepository.findByUserId(userId))
+        .thenReturn(Optional.of(cart));
+
+      when(cartItemRepository.findByIdAndCartId(cartItemId, cart.getId()))
+        .thenReturn(Optional.empty());
+
+      Assertions.assertThrows(ResourceNotFoundException.class, () -> {
+        cartService.updateQuantity(userId, cartItemId, 20);
+      });
+
+    }
+
+
+    @Test
+    void updateItemQuantity_ShouldThrowException_IfQuantityIsGreaterThanStocks(){
+
+      Long userId = 1L;
+      Long requestCartItemId = 1L;
+      Integer requestQuantity = 6;
+
+      Cart cart = new Cart();
+
+      Product product = new Product();
+      product.setStockQuantity(5);
+      product.setHasVariants(false);
+
+      CartItem cartItem = new CartItem();
+      cartItem.setCart(cart);
+      cartItem.setProduct(product);
+
+      when(cartRepository.findByUserId(userId))
+        .thenReturn(Optional.of(cart));
+
+      when(cartItemRepository.findByIdAndCartId(requestCartItemId, cart.getId()))
+        .thenReturn(Optional.of(cartItem));
+
+      Assertions.assertThrows(InsufficientStockException.class, () -> {
+        cartService.updateQuantity(userId, requestCartItemId, requestQuantity);
+      });
+
+    }
+
+
+    @Test
+    void updateItemQuantity_ShouldThrowException_IfQuantityIsGreaterThanVariantStocks(){
+
+      Long userId = 1L;
+      Long requestCartItemId = 1L;
+      Integer requestQuantity = 11;
+
+      Cart cart = new Cart();
+
+      Product product = new Product();
+      product.setStockQuantity(5);
+      product.setHasVariants(true);
+
+      ProductVariant productVariant = new ProductVariant();
+      productVariant.setStockQuantity(10);
+      productVariant.setProduct(product);
+
+      CartItem cartItem = new CartItem();
+      cartItem.setCart(cart);
+      cartItem.setProduct(product);
+      cartItem.setProductVariant(productVariant);
+
+      when(cartRepository.findByUserId(userId))
+        .thenReturn(Optional.of(cart));
+
+      when(cartItemRepository.findByIdAndCartId(requestCartItemId, cart.getId()))
+        .thenReturn(Optional.of(cartItem));
+
+      Assertions.assertThrows(InsufficientStockException.class, () -> {
+        cartService.updateQuantity(userId, requestCartItemId, requestQuantity);
+      });
+
+      verify(cartItemRepository, never()).save(any(CartItem.class));
+
+    }
+
+
+    @Test
+    void updateItemQuantity_ShouldUpdateQuantity_IfNoVariantAndSuccessful(){
+
+      Long userId = 1L;
+      Long requestCartItemId = 1L;
+      Integer requestQuantity = 3;
+
+      Cart cart = new Cart();
+
+      Product product = new Product();
+      product.setStockQuantity(5);
+      product.setHasVariants(false);
+
+      CartItem cartItem = new CartItem();
+      cartItem.setCart(cart);
+      cartItem.setProduct(product);
+      cartItem.setQuantity(2);
+      cartItem.setPrice(BigDecimal.valueOf(20000));
+
+      when(cartRepository.findByUserId(userId))
+        .thenReturn(Optional.of(cart));
+
+      when(cartItemRepository.findByIdAndCartId(requestCartItemId, cart.getId()))
+        .thenReturn(Optional.of(cartItem));
+
+      when(cartItemRepository.save(any(CartItem.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+      ItemQuantityUpdateResponse updatedQuantity = cartService.updateQuantity(userId, requestCartItemId, requestQuantity);
+
+      Assertions.assertEquals(requestQuantity, updatedQuantity.quantity());
+
+      verify(cartItemRepository).save(cartItem);
+    }
+
+
+    @Test
+    void updateItemQuantity_ShouldUpdateQuantity_IfHaveVarianntAndSuccessfull(){
+
+      Long userId = 1L;
+      Long requestCartItemId = 1L;
+      Integer requestQuantity = 3;
+
+      Cart cart = new Cart();
+
+      Product product = new Product();
+      product.setStockQuantity(0);
+      product.setHasVariants(false);
+
+      ProductVariant productVariant = new ProductVariant();
+      productVariant.setStockQuantity(10);
+      productVariant.setProduct(product);
+
+      CartItem cartItem = new CartItem();
+      cartItem.setCart(cart);
+      cartItem.setProduct(product);
+      cartItem.setProductVariant(productVariant);
+      cartItem.setQuantity(2);
+      cartItem.setPrice(BigDecimal.valueOf(20000));
+
+      when(cartRepository.findByUserId(userId))
+        .thenReturn(Optional.of(cart));
+
+      when(cartItemRepository.findByIdAndCartId(requestCartItemId, cart.getId()))
+        .thenReturn(Optional.of(cartItem));
+
+      when(cartItemRepository.save(any(CartItem.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+      ItemQuantityUpdateResponse updatedQuantity = cartService.updateQuantity(userId, requestCartItemId, requestQuantity);
+
+      Assertions.assertEquals(requestQuantity, updatedQuantity.quantity());
+      Assertions.assertEquals(cartItem.getPrice().multiply(BigDecimal.valueOf(requestQuantity)), updatedQuantity.subtotal());
+
+      verify(cartItemRepository).save(cartItem);
+    }
+
+
+    @Test
+    void updateItemQuantity_ShouldThrowException_IfQuantityLessThanOrEqualZero(){
+
+      Integer quantity = -1;
+
+      Assertions.assertThrows(IllegalArgumentException.class, () -> {
+        cartService.updateQuantity(1L, 1L, quantity);
+      });
+
+    }
+
+  }
 
 }

@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import com.kartify.api.cart.dto.CartItemCreateRequest;
 import com.kartify.api.cart.dto.CartItemResponse;
 import com.kartify.api.cart.dto.CartResponse;
+import com.kartify.api.cart.dto.ItemQuantityUpdateResponse;
 import com.kartify.api.cart.entity.Cart;
 import com.kartify.api.cart.entity.CartItem;
 import com.kartify.api.cart.enums.CartStatus;
@@ -189,6 +190,44 @@ public class CartService {
     cartItemRepository.delete(cartItem);
 
   }
+
+
+  // Update item quantity
+  public ItemQuantityUpdateResponse updateQuantity(Long userId, Long cartItemId, Integer quantity){
+
+    if (quantity <= 0) {
+      throw new IllegalArgumentException("Quantity must be greater than zero.");
+    }
+
+    Cart cart = cartRepository.findByUserId(userId)
+      .orElseThrow(() -> new ResourceNotFoundException("Cart not found"));
+
+    CartItem cartItem = cartItemRepository.findByIdAndCartId(cartItemId, cart.getId())
+      .orElseThrow(() -> new ResourceNotFoundException("item not found in the cart"));
+
+    Integer stockQuantity = cartItem.getProductVariant() != null 
+      ? cartItem.getProductVariant().getStockQuantity() 
+      : cartItem.getProduct().getStockQuantity();
+
+    if(quantity > stockQuantity){
+      throw new InsufficientStockException("Not enough stock available.");
+    }
+
+    cartItem.setQuantity(quantity);
+
+    CartItem updateQuantity = cartItemRepository.save(cartItem);
+
+    Integer qty = updateQuantity.getQuantity();
+    BigDecimal subtotal = updateQuantity.getPrice().multiply(BigDecimal.valueOf(qty));
+
+    return new ItemQuantityUpdateResponse(
+      updateQuantity.getId(),
+      qty,
+      subtotal
+    );
+
+  }
+
 
   // Creating Response
   private CartItemResponse toResponse(CartItem cartItem){

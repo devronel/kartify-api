@@ -1,10 +1,13 @@
 package com.kartify.api.cart.controller;
 
+import java.util.Map;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -14,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.kartify.api.cart.dto.CartItemCreateRequest;
 import com.kartify.api.cart.dto.CartItemResponse;
 import com.kartify.api.cart.dto.CartResponse;
+import com.kartify.api.cart.dto.ItemQuantityUpdateResponse;
 import com.kartify.api.cart.service.CartService;
 import com.kartify.api.security.CustomUserDetails;
 
@@ -75,6 +79,23 @@ public class CartController {
     cartService.removeItem(principal.getId(), id);
 
     return ResponseEntity.noContent().build();
+
+  }
+
+
+  // Update item quantity
+  @PatchMapping("/items/{id}")
+  public ResponseEntity<ItemQuantityUpdateResponse> updateQuantity(
+    @AuthenticationPrincipal CustomUserDetails principal,
+    @PathVariable Long id,
+    @RequestBody Map<String, Integer> body
+  ) {
+
+    Integer quantity = body.get("quantity");
+
+    ItemQuantityUpdateResponse updateQuantity = cartService.updateQuantity(principal.getId(), id, quantity);
+
+    return ResponseEntity.ok(updateQuantity);
 
   }
 
