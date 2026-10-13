@@ -99,5 +99,15 @@ public class CartController {
 
   }
 
+
+  @GetMapping("/items/count")
+  public ResponseEntity<Integer> getTotalCartQuantity(@AuthenticationPrincipal CustomUserDetails principal) {
+
+    Integer itemCount = cartService.getTotalCartQuantity(principal.getId());
+
+    return ResponseEntity.ok(itemCount);
+
+  }
+
 }
 

@@ -229,6 +229,20 @@ public class CartService {
   }
 
 
+  // Get cart summary like total items
+  public Integer getTotalCartQuantity(Long userId){
+    
+    User user = userRepository.findById(userId)
+      .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+    if(user.getCart() == null){
+      return 0;
+    }
+    
+    return cartItemRepository.getTotalQuantityByCartId(user.getCart().getId());
+
+  }
+
   // Creating Response
   private CartItemResponse toResponse(CartItem cartItem){
 
