@@ -6,5 +6,6 @@ import java.util.List;
 public record CartResponse(
   List<CartItemResponse> items,
   Integer totalQuantity,
-  BigDecimal subtotal
+  BigDecimal subtotal,
+  Boolean hasUnavailableItems
 ) {}

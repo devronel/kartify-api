@@ -5,5 +5,7 @@ import java.math.BigDecimal;
 public record ItemQuantityUpdateResponse(
   Long id,
   Integer quantity,
-  BigDecimal subtotal
+  BigDecimal subtotal,
+  Integer availableStock,
+  Boolean isAvailable
 ) {}

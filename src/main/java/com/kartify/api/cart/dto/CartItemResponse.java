@@ -10,5 +10,7 @@ public record CartItemResponse(
   String imageUrl,
   Integer quantity,
   BigDecimal price,
-  BigDecimal subtotal
+  BigDecimal subtotal,
+  Integer availableStock,
+  Boolean isAvailable
 ) {}

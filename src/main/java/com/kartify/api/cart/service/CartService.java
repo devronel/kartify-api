@@ -155,7 +155,7 @@ public class CartService {
       .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
     if(user.getCart() == null){
-      return new CartResponse(List.of(), 0, BigDecimal.ZERO);
+      return new CartResponse(List.of(), 0, BigDecimal.ZERO, true);
     }
     
     List<CartItemResponse> cartItems = cartItemRepository.findAllByCartIdOrderByCreatedAtDesc(user.getCart().getId())
@@ -169,10 +169,13 @@ public class CartService {
         .map(item -> item.subtotal())
         .reduce(BigDecimal.ZERO, (current , next) -> current.add(next));
 
+    Boolean hasUnavailableItems = cartItems.stream().anyMatch(item -> !item.isAvailable());
+
     return new CartResponse(
       cartItems,
       totalQuantity,
-      subtotal
+      subtotal,
+      hasUnavailableItems
     );
 
   }
@@ -220,10 +223,16 @@ public class CartService {
     Integer qty = updateQuantity.getQuantity();
     BigDecimal subtotal = updateQuantity.getPrice().multiply(BigDecimal.valueOf(qty));
 
+    Integer stock = cartItem.getProductVariant() != null ? cartItem.getProductVariant().getStockQuantity() : cartItem.getProduct().getStockQuantity();
+    Integer availableStock = stock;
+    Boolean isAvailable = stock > 0 && qty <= stock;
+
     return new ItemQuantityUpdateResponse(
       updateQuantity.getId(),
       qty,
-      subtotal
+      subtotal,
+      availableStock,
+      isAvailable
     );
 
   }
@@ -258,6 +267,10 @@ public class CartService {
     BigDecimal price = cartItem.getPrice();
     BigDecimal subtotal = price.multiply(BigDecimal.valueOf(quantity));
 
+    Integer stock = cartItem.getProductVariant() != null ? cartItem.getProductVariant().getStockQuantity() : cartItem.getProduct().getStockQuantity();
+    Integer availableStock = stock;
+    Boolean isAvailable = stock > 0 && quantity <= stock;
+
     return new CartItemResponse(
       cartItem.getId(),
       cartItem.getProduct().getId(),
@@ -266,7 +279,9 @@ public class CartService {
       primaryImageUrl,
       quantity,
       price,
-      subtotal
+      subtotal,
+      availableStock,
+      isAvailable
     );
   }
 
