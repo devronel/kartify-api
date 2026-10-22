@@ -1,4 +1,4 @@
-package com.kartify.api.checkout.enums;
+package com.kartify.api.order.enums;
 
 public enum OrderStatus {
   PENDING,

@@ -1,8 +1,8 @@
-package com.kartify.api.checkout.entity;
+package com.kartify.api.order.entity;
 
 import java.math.BigDecimal;
 
-import com.kartify.api.checkout.enums.OrderStatus;
+import com.kartify.api.order.enums.OrderStatus;
 import com.kartify.api.shared.BaseEntity;
 import com.kartify.api.user.entity.User;
 

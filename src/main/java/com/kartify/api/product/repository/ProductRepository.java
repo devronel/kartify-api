@@ -8,6 +8,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -64,4 +65,13 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
         WHERE product.category.id IN :categoryIds
     """)
     Integer countByCategoryIdIn(@Param("categoryIds") List<Long> categoryIds);
+
+
+    @Modifying(clearAutomatically = true)
+    @Query("""
+        UPDATE Product product
+        SET product.stockQuantity = product.stockQuantity - :qty
+        WHERE product.id = :id AND product.stockQuantity >= :qty
+    """)
+    int decrementStock(@Param("id") Long id, @Param("qty") int qty);
 }

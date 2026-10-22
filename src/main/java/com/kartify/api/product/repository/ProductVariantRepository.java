@@ -45,4 +45,14 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
     """)
     List<Object[]> sumStockByProductIds(List<Long> productIds);
 
+
+    // Decrement the stock quantity
+    @Modifying(clearAutomatically = true)
+    @Query("""
+        UPDATE ProductVariant variant
+        SET variant.stockQuantity = variant.stockQuantity - :qty
+        WHERE variant.id = :id AND variant.stockQuantity >= :qty
+    """)
+    int decrementStock(@Param("id") Long id, @Param("qty") int qty);
+
 }

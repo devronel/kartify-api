@@ -1,4 +1,4 @@
-package com.kartify.api.checkout.enums;
+package com.kartify.api.payment.enums;
 
 public enum PaymentStatus {
   PENDING,

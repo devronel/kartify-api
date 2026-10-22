@@ -1,4 +1,4 @@
-package com.kartify.api.checkout.entity;
+package com.kartify.api.order.entity;
 
 import java.math.BigDecimal;
 
