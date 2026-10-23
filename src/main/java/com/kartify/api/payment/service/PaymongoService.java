@@ -7,28 +7,33 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
-import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kartify.api.payment.dto.PaymentLink;
 import com.kartify.api.payment.dto.PaymentLinkRequest;
+
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 @Service
 public class PaymongoService {
 
   private final String secretKey;
+  private final ObjectMapper objectMapper;
 
   public PaymongoService(
-    @Value("${paymongo.secret-key}") String secretKey
+    @Value("${paymongo.secret-key}") String secretKey,
+    ObjectMapper objectMapper
   ){
     this.secretKey = Base64.getEncoder().encodeToString(
       (secretKey + ":").getBytes(StandardCharsets.UTF_8)
     );
+    this.objectMapper = objectMapper;
   }
 
-  public String process(PaymentLinkRequest data) {
+  public PaymentLink process(PaymentLinkRequest data) {
     
     try {
 
@@ -53,7 +58,15 @@ public class PaymongoService {
   
       HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());  
 
-      return response.body();
+      JsonNode pmResponse = objectMapper.readTree(response.body()).path("data");
+      String id = pmResponse.path("id").asString();
+      String checkoutUrl = pmResponse.path("url").asString();
+      
+      return new PaymentLink(
+        id,
+        checkoutUrl,
+        response.body()
+      );
 
     } catch (IOException e) {
       throw new RuntimeException("PayMongo request failed", e);

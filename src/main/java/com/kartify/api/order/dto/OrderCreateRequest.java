@@ -1,6 +1,6 @@
 package com.kartify.api.order.dto;
 
-import com.kartify.api.payment.enums.PaymentMethod;
+import com.kartify.api.order.enums.PaymentMethod;
 
 import jakarta.validation.constraints.NotNull;
 

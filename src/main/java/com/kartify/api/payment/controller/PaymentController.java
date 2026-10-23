@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.kartify.api.payment.dto.PaymentLink;
 import com.kartify.api.payment.dto.PaymentLinkRequest;
 import com.kartify.api.payment.service.PaymongoService;
 
@@ -22,9 +23,9 @@ public class PaymentController {
   }
 
   @PostMapping
-  public ResponseEntity<String> process(@RequestBody PaymentLinkRequest paymentLinkRequest){
+  public ResponseEntity<PaymentLink> process(@RequestBody PaymentLinkRequest paymentLinkRequest){
 
-    String response = paymongoService.process(paymentLinkRequest);
+    PaymentLink response = paymongoService.process(paymentLinkRequest);
 
     return ResponseEntity.ok(response);
 

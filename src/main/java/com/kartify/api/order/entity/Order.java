@@ -1,11 +1,14 @@
 package com.kartify.api.order.entity;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.kartify.api.order.enums.OrderStatus;
 import com.kartify.api.shared.BaseEntity;
 import com.kartify.api.user.entity.User;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -16,6 +19,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 
 @Entity
@@ -25,6 +29,12 @@ public class Order extends BaseEntity {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;  
+
+  @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+  private List<OrderItem> orderItems = new ArrayList<>();
+
+  @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+  private List<OrderStatusHistory> orderStatusHistories = new ArrayList<>();
 
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "user_id", nullable = false)
@@ -86,6 +96,22 @@ public class Order extends BaseEntity {
 
   // Getter & Setter
   public Long getId(){ return id; }
+
+  public List<OrderItem> getOrderItems(){ return orderItems; }
+  public void addOrderItem(OrderItem item){
+    orderItems.add(item);
+    item.setOrder(this);
+  }
+
+  public List<OrderStatusHistory> getOrderStatusHistories(){ return orderStatusHistories; }
+  public void addStatusHistory(OrderStatus status, String notes, User changeBy){
+    OrderStatusHistory orderStatusHistory = new OrderStatusHistory();
+    orderStatusHistory.setOrder(this);
+    orderStatusHistory.setStatus(status);
+    orderStatusHistory.setNotes(notes);
+    orderStatusHistory.setChangeBy(changeBy);
+    this.orderStatusHistories.add(orderStatusHistory);
+  }
 
   public User getUser(){ return user; }
   public void setUser(User user){ this.user = user; }

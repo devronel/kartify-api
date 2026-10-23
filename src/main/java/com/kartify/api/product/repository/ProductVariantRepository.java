@@ -47,7 +47,7 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
 
 
     // Decrement the stock quantity
-    @Modifying(clearAutomatically = true)
+    @Modifying
     @Query("""
         UPDATE ProductVariant variant
         SET variant.stockQuantity = variant.stockQuantity - :qty

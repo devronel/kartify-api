@@ -1,11 +1,10 @@
-package com.kartify.api.payment.entity;
+package com.kartify.api.order.entity;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-import com.kartify.api.order.entity.Order;
-import com.kartify.api.payment.enums.PaymentMethod;
-import com.kartify.api.payment.enums.PaymentStatus;
+import com.kartify.api.order.enums.PaymentMethod;
+import com.kartify.api.order.enums.PaymentStatus;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

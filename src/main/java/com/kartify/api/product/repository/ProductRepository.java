@@ -67,7 +67,7 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     Integer countByCategoryIdIn(@Param("categoryIds") List<Long> categoryIds);
 
 
-    @Modifying(clearAutomatically = true)
+    @Modifying
     @Query("""
         UPDATE Product product
         SET product.stockQuantity = product.stockQuantity - :qty
