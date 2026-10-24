@@ -168,6 +168,7 @@ public class OrderService {
     String name = product.getName();
 
     // hasVariants must match whether the cart item has a variant
+    // Possible that the product in the cart don't have variant the actual product updated to have variant
     if (product.getHasVariants() != (variant != null)) {
       return Optional.of(
         new ItemProblem(
