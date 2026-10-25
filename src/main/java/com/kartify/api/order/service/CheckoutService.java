@@ -40,10 +40,10 @@ public class CheckoutService {
       "Paid"
     ));
 
-    paymentService.create(order.orderId(), payment.id(), payment.checkoutUrl(), payment.payload());
+    paymentService.create(order.orderId(), payment.paymentId(), payment.checkoutUrl(), payment.payload());
 
     return new CheckoutResponse(
-      payment.id(), 
+      payment.paymentId(), 
       payment.checkoutUrl()
     );
 

@@ -56,6 +56,7 @@ public class OrderService {
   }
 
   // Create order
+  // OrderCreateResponse
   @Transactional
   public OrderCreateResponse create(Long userId, OrderCreateRequest payload){
 
@@ -124,10 +125,10 @@ public class OrderService {
       orderItem.setPrice(unitPrice);
       orderItem.setQuantity(item.getQuantity());
       orderItem.setLineTotal(unitPrice.multiply(BigDecimal.valueOf(item.getQuantity())));
+      orderItem.setProductImage(item.getProduct().getPrimaryImage());
       order.addOrderItem(orderItem);
-      // TODO: variant label, product image
+      // TODO: variant label
     }
-
 
     // 7. Add order status history
     order.addStatusHistory(OrderStatus.PENDING, null, address.getUser());
@@ -137,12 +138,12 @@ public class OrderService {
     Order orderCreated = orderRepository.save(order);
 
 
-    // 9 Clear the cart
-    cart.getItems().clear();
-    
-    
-    // 10. Lock rows in the same order for every transaction
+    // 9. Lock rows in the same order for every transaction
     decrementStock(cartItems);
+
+    
+    // 10 Clear the cart
+    cart.getItems().clear();
 
 
     return new OrderCreateResponse(
@@ -153,15 +154,17 @@ public class OrderService {
   }
 
 
+  // Return all the errors of cart items
   public List<ItemProblem> findProblems(List<CartItem> items) {
     List<ItemProblem> problems = new ArrayList<>();
     for (CartItem item : items) {
-        checkItem(item).ifPresent(problems::add);
+      checkItem(item).ifPresent(problems::add);
     }
     return problems;
   }
 
 
+  // Check cart item and return the error found
   public Optional<ItemProblem> checkItem(CartItem item) {
     Product product = item.getProduct();
     ProductVariant variant = item.getProductVariant();
@@ -245,6 +248,7 @@ public class OrderService {
   }
 
 
+  // Decrement the product stock
   private void decrementStock(List<CartItem> items) {
     // Lock rows in the same order for every transaction: simple products first,
     // then variants, each by the ID of the row being updated

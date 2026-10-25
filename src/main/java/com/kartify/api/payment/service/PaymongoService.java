@@ -59,11 +59,11 @@ public class PaymongoService {
       HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());  
 
       JsonNode pmResponse = objectMapper.readTree(response.body()).path("data");
-      String id = pmResponse.path("id").asString();
+      String paymentId = pmResponse.path("id").asString();
       String checkoutUrl = pmResponse.path("url").asString();
       
       return new PaymentLink(
-        id,
+        paymentId,
         checkoutUrl,
         response.body()
       );

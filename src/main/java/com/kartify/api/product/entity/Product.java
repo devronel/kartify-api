@@ -162,4 +162,23 @@ public class Product extends BaseEntity {
     public LocalDateTime getDeletedAt() { return deletedAt; }
     public void setDeletedAt(LocalDateTime deletedAt) { this.deletedAt = deletedAt; }
 
+    // Helpers
+
+    // Get primary image
+    public String getPrimaryImage(){
+        
+        if(files.isEmpty()){
+            return null;
+        }
+
+        String filename = files.stream()
+            .filter(file -> Boolean.TRUE.equals(file.getIsPrimary()))
+            .map(file -> file.getFilename())
+            .findFirst()
+            .orElse(null);
+        
+        return filename;
+    
+    }
+
 }
