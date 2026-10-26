@@ -1,6 +1,7 @@
 package com.kartify.api.order.entity;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
 
 import com.kartify.api.order.enums.PaymentMethod;
@@ -56,7 +57,7 @@ public class Payment {
   private String payload;
 
   @Column(name = "paid_at")
-  private LocalDateTime paidAt;
+  private Instant paidAt;
 
   // Constructor
   public Payment(){}
@@ -91,7 +92,7 @@ public class Payment {
   public String getPayload(){ return payload; }
   public void setPayload(String payload){ this.payload = payload; }
 
-  public LocalDateTime getPaidAt(){ return paidAt; }
-  public void setPaidAt(LocalDateTime paidAt){ this.paidAt = paidAt; }
+  public Instant getPaidAt(){ return paidAt; }
+  public void setPaidAt(Instant paidAt){ this.paidAt = paidAt; }
 
 }

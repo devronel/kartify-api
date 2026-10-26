@@ -50,6 +50,8 @@ imagekit:
 paymongo: 
   secret-key: ${PAYMONGO_SECRET_KEY}
   public-key: ${PAYMONGO_PUBLIC_KEY}
+  webhook-secret-key: ${PAYMONGO_WEBHOOK_SECRET}
+  livemode: false
 app:
   base-url: http://localhost:8080
   storage:

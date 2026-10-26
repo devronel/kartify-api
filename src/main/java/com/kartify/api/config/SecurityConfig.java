@@ -7,6 +7,7 @@ import java.util.Map;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -69,6 +70,7 @@ public class SecurityConfig {
             .csrf(csrf -> csrf
                 .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                 .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
+                .ignoringRequestMatchers("/api/webhooks/**")
             )
             .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class)
             .securityContext(context -> context
@@ -101,6 +103,7 @@ public class SecurityConfig {
                     "/api/categories/**", 
                     "/api/files/public/**"
                 ).permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/webhooks/paymongo").permitAll()
                 .anyRequest().authenticated()
             );
 

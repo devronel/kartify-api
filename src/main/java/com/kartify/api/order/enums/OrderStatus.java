@@ -6,7 +6,18 @@ public enum OrderStatus {
   PROCESSING,
   SHIPPED,
   DELIVERED,
-  CANCELLED
+  CANCELLED;
+
+  public boolean canTransitionTo(OrderStatus next){
+    return switch(this) {
+      case PENDING  -> next == PAID || next == CANCELLED;
+      case PAID     -> next == PROCESSING || next == CANCELLED;
+      case PROCESSING -> next == SHIPPED || next == CANCELLED;
+      case SHIPPED    -> next == DELIVERED;
+      case DELIVERED, CANCELLED -> false; 
+    };
+  }
+
 }
 
 /*

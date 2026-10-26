@@ -28,6 +28,7 @@ import com.kartify.api.product.entity.Product;
 import com.kartify.api.product.entity.ProductVariant;
 import com.kartify.api.product.repository.ProductRepository;
 import com.kartify.api.product.repository.ProductVariantRepository;
+import com.kartify.api.user.entity.User;
 import com.kartify.api.user.entity.UserAddress;
 import com.kartify.api.user.repository.UserAddressRepository;
 
@@ -150,6 +151,22 @@ public class OrderService {
       orderCreated.getId(),
       orderCreated.getTotal()
     );
+
+  }
+
+
+  // Change order status
+  @Transactional
+  public void changeStatus(Order order, OrderStatus next, String notes, User changeBy){
+    
+    if(!order.getStatus().canTransitionTo(next)){
+      throw new IllegalStateException(
+        "Cannot change order " + order.getOrderNumber() + " from " + order.getStatus() + " to " + next
+      );
+    }
+
+    order.setStatus(next);
+    order.addStatusHistory(next, notes, changeBy);
 
   }
 
