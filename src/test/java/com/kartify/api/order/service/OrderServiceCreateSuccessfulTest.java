@@ -7,6 +7,7 @@ import java.math.BigDecimal;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -22,12 +23,14 @@ import com.kartify.api.exception.CartItemsUnavailableException;
 import com.kartify.api.order.dto.OrderCreateRequest;
 import com.kartify.api.order.dto.OrderCreateResponse;
 import com.kartify.api.order.entity.Order;
+import com.kartify.api.order.enums.OrderStatus;
 import com.kartify.api.order.enums.PaymentMethod;
 import com.kartify.api.order.repository.OrderRepository;
 import com.kartify.api.product.entity.Product;
 import com.kartify.api.product.entity.ProductVariant;
 import com.kartify.api.product.repository.ProductRepository;
 import com.kartify.api.product.repository.ProductVariantRepository;
+import com.kartify.api.user.entity.User;
 import com.kartify.api.user.entity.UserAddress;
 import com.kartify.api.user.repository.UserAddressRepository;
 
@@ -61,6 +64,8 @@ public class OrderServiceCreateSuccessfulTest {
     );
   }
 
+
+  // Create Order
   @Test
   void createOrder_ShouldReturnSuccess_IfOrderIsCreated(){
 
@@ -102,4 +107,25 @@ public class OrderServiceCreateSuccessfulTest {
 
   }
 
+
+  // Change Order Status
+  @Nested
+  class ChangeStatusOrderTest{
+
+    @Test
+    void changeStatusOrder_ShouldUpdateStatus_ifNoError(){
+
+      Order order = new Order();
+      order.setStatus(OrderStatus.PENDING);
+      OrderStatus next = OrderStatus.PAID;
+      String notes = "Paid"; 
+      User changeBy = null;
+
+      orderService.changeStatus(order, next, notes, changeBy);
+
+      Assertions.assertEquals(OrderStatus.PAID, order.getStatus());
+
+    }
+
+  }
 }

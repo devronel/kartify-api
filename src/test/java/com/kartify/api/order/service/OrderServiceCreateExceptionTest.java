@@ -22,9 +22,12 @@ import com.kartify.api.exception.CartItemsUnavailableException;
 import com.kartify.api.exception.FieldValidationException;
 import com.kartify.api.exception.ResourceNotFoundException;
 import com.kartify.api.order.dto.OrderCreateRequest;
+import com.kartify.api.order.entity.Order;
+import com.kartify.api.order.enums.OrderStatus;
 import com.kartify.api.order.enums.PaymentMethod;
 import com.kartify.api.product.entity.Product;
 import com.kartify.api.product.entity.ProductVariant;
+import com.kartify.api.user.entity.User;
 import com.kartify.api.user.entity.UserAddress;
 import com.kartify.api.user.repository.UserAddressRepository;
 
@@ -49,6 +52,8 @@ public class OrderServiceCreateExceptionTest {
     );
   }
 
+
+  // Create Order
   @Nested
   class CreateOrderTest{
 
@@ -518,4 +523,25 @@ public class OrderServiceCreateExceptionTest {
 
   }
 
+
+  // Change Order Status
+  @Nested
+  class ChangeStatusOrderTest{
+
+    @Test
+    void changeStatusOrder_ShouldThrowException_ifStatusInvalid(){
+
+      Order order = new Order();
+      order.setStatus(OrderStatus.PENDING);
+      OrderStatus next = OrderStatus.PROCESSING;
+      String notes = "Paid"; 
+      User changeBy = null;
+
+      Assertions.assertThrows(IllegalStateException.class, () -> {
+        orderService.changeStatus(order, next, notes, changeBy);
+      });
+
+    }
+
+  }
 }

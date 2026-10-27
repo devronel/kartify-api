@@ -62,6 +62,7 @@ public class PaymentService {
   public void markPaid(String linkId, BigDecimal paidAmount, Instant paidAt, String rawBody){
 
     Payment payment = paymentRepository.findByProviderPaymentIdForUpdate(linkId).orElse(null);
+    
     if(payment == null){
       log.warn("Webhook for unknown payment link {}", linkId);
       return;
@@ -83,6 +84,7 @@ public class PaymentService {
     payment.setPayload(rawBody);
 
     Order order = orderRepository.findByIdForUpdate(payment.getOrder().getId()).orElseThrow();
+
     if(order.getStatus() == OrderStatus.PENDING){
       orderService.changeStatus(order, OrderStatus.PAID, "Payment Recieved", null);
     }else{
