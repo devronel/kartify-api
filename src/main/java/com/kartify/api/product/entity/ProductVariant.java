@@ -3,6 +3,7 @@ package com.kartify.api.product.entity;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.StringJoiner;
 
 import com.kartify.api.shared.BaseEntity;
 
@@ -66,6 +67,16 @@ public class ProductVariant extends BaseEntity {
     public Long getId(){ return id; }
 
     public List<ProductAttributeValue> getAttributeValues(){ return attributeValues; }
+    public String getAttributeValueName() {    
+       
+        StringJoiner joiner = new StringJoiner("/");
+        
+        for (ProductAttributeValue attributeValue : attributeValues) {
+            joiner.add(attributeValue.getValue());
+        }
+
+        return joiner.toString();
+    }
     public void addVariantAttributeValue(ProductAttributeValue attributeValue){
         attributeValues.add(attributeValue);
         attributeValue.getProductVariants().add(this);

@@ -1,12 +1,17 @@
 package com.kartify.api.order.service;
 
 import java.math.BigDecimal;
+import java.time.Year;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,14 +25,17 @@ import com.kartify.api.exception.FieldValidationException;
 import com.kartify.api.exception.ResourceNotFoundException;
 import com.kartify.api.order.dto.OrderCreateRequest;
 import com.kartify.api.order.dto.OrderCreateResponse;
+import com.kartify.api.order.dto.OrderResponse;
 import com.kartify.api.order.entity.Order;
 import com.kartify.api.order.entity.OrderItem;
 import com.kartify.api.order.enums.OrderStatus;
+import com.kartify.api.order.repository.OrderItemRepository;
 import com.kartify.api.order.repository.OrderRepository;
 import com.kartify.api.product.entity.Product;
 import com.kartify.api.product.entity.ProductVariant;
 import com.kartify.api.product.repository.ProductRepository;
 import com.kartify.api.product.repository.ProductVariantRepository;
+import com.kartify.api.shared.dto.PaginationResponse;
 import com.kartify.api.user.entity.User;
 import com.kartify.api.user.entity.UserAddress;
 import com.kartify.api.user.repository.UserAddressRepository;
@@ -40,6 +48,7 @@ public class OrderService {
   private final ProductRepository productRepository;
   private final ProductVariantRepository productVariantRepository;
   private final OrderRepository orderRepository;
+  private final OrderItemRepository orderItemRepository;
 
   // Constructor
   public OrderService(
@@ -47,13 +56,15 @@ public class OrderService {
     UserAddressRepository userAddressRepository,
     ProductRepository productRepository,
     ProductVariantRepository productVariantRepository,
-    OrderRepository orderRepository
+    OrderRepository orderRepository,
+    OrderItemRepository orderItemRepository
   ){
     this.cartRepository = cartRepository;
     this.userAddressRepository = userAddressRepository;
     this.productRepository = productRepository;
     this.productVariantRepository = productVariantRepository;
     this.orderRepository = orderRepository;
+    this.orderItemRepository = orderItemRepository;
   }
 
   // Create order
@@ -91,7 +102,7 @@ public class OrderService {
     // 5. Create new order
     Order order = new Order();
     order.setUser(address.getUser());
-    order.setOrderNumber("ORD-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase());
+    order.setOrderNumber("ORD-" + Year.now().getValue() + "-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase());
     order.setStatus(OrderStatus.PENDING);
     order.setSubtotal(subtotal);
     order.setShippingFee(shippingFee);
@@ -120,6 +131,7 @@ public class OrderService {
       orderItem.setProduct(product);
       if(variant != null){
         orderItem.setProductVariant(variant);
+        orderItem.setVariantLabel(variant.getAttributeValueName());
       }
       orderItem.setProductName(product.getName());
       orderItem.setSku(variant != null ? variant.getSku() : product.getSku());
@@ -128,7 +140,6 @@ public class OrderService {
       orderItem.setLineTotal(unitPrice.multiply(BigDecimal.valueOf(item.getQuantity())));
       orderItem.setProductImage(item.getProduct().getPrimaryImage());
       order.addOrderItem(orderItem);
-      // TODO: variant label
     }
 
     // 7. Add order status history
@@ -168,6 +179,44 @@ public class OrderService {
     order.setStatus(next);
     order.addStatusHistory(next, notes, changeBy);
 
+  }
+
+
+  // Get all user orders
+  public PaginationResponse<OrderResponse> getAllOrder(Long userId, Pageable pageable){
+    
+    Page<Order> orderPage = orderRepository.findByUserId(userId, pageable);
+
+    List<Order> orders = orderPage.getContent();
+
+    List<Long> orderIds = orders.stream().map(order -> order.getId()).toList();
+
+    List<OrderItem> orderItems = orderItemRepository.findAllByOrderIds(orderIds);
+
+    Map<Long, Integer> itemCountByOrderId = orderItems.stream()
+      .collect(Collectors.groupingBy(
+        orderItem -> orderItem.getOrder().getId(),
+        Collectors.summingInt(item -> 1)
+      ));
+
+    List<OrderResponse> orderResponse = orders.stream()
+      .map(order -> new OrderResponse(
+        order.getOrderNumber(),
+        order.getStatus(),
+        order.getTotal(),
+        itemCountByOrderId.getOrDefault(order.getId(), 0)
+      )).toList();
+
+    return new PaginationResponse<>(
+      orderResponse,
+      orderPage.getNumber() + 1,
+      orderPage.getSize(),
+      orderPage.getTotalElements(),
+      orderPage.getTotalPages(),
+      orderPage.hasNext(),
+      orderPage.hasPrevious()
+    );
+  
   }
 
 

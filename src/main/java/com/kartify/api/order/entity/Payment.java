@@ -2,7 +2,6 @@ package com.kartify.api.order.entity;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.time.LocalDateTime;
 
 import com.kartify.api.order.enums.PaymentMethod;
 import com.kartify.api.order.enums.PaymentStatus;
