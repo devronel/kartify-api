@@ -19,4 +19,7 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
   @Query("SELECT payment FROM Payment payment WHERE payment.providerPaymentId = :providerPaymentId")
   Optional<Payment> findByProviderPaymentIdForUpdate(@Param("providerPaymentId") String providerPaymentId);
 
+
+  Optional<Payment> findByIdAndOrderId(Long id, Long orderId);
+
 }

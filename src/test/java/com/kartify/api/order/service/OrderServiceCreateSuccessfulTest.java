@@ -14,20 +14,17 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.kartify.api.cart.dto.ItemProblem;
 import com.kartify.api.cart.entity.Cart;
 import com.kartify.api.cart.entity.CartItem;
-import com.kartify.api.cart.enums.ItemProblemReason;
 import com.kartify.api.cart.repository.CartRepository;
-import com.kartify.api.exception.CartItemsUnavailableException;
 import com.kartify.api.order.dto.OrderCreateRequest;
 import com.kartify.api.order.dto.OrderCreateResponse;
 import com.kartify.api.order.entity.Order;
 import com.kartify.api.order.enums.OrderStatus;
 import com.kartify.api.order.enums.PaymentMethod;
 import com.kartify.api.order.repository.OrderRepository;
+import com.kartify.api.order.repository.PaymentRepository;
 import com.kartify.api.product.entity.Product;
-import com.kartify.api.product.entity.ProductVariant;
 import com.kartify.api.product.repository.ProductRepository;
 import com.kartify.api.product.repository.ProductVariantRepository;
 import com.kartify.api.user.entity.User;
@@ -51,6 +48,9 @@ public class OrderServiceCreateSuccessfulTest {
 
   @Mock
   private ProductVariantRepository productVariantRepository;
+
+  @Mock
+  private PaymentRepository paymentRepository;
 
   @InjectMocks
   private OrderService orderService;

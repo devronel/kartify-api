@@ -46,7 +46,7 @@ public class PaymongoWebhookController {
 
     parser.parseLinkPaid(rawBody).ifPresent(event -> {
       paymentService.markPaid(
-        event.linkdId(), 
+        event.paymentLinkId(), 
         BigDecimal.valueOf(event.amountCentavos(), 2), 
         event.paidAt(), 
         rawBody

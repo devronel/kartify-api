@@ -36,8 +36,9 @@ public class PaymentService {
     this.orderService = orderService;
   }
 
-  @Transactional
-  public void create(Long orderId, String providerPaymentId, String checkoutUrl, String payload){
+
+  // Create Payment
+  public Payment create(Long orderId){
 
     Order order = orderRepository.findById(orderId)
       .orElseThrow(() -> new ResourceNotFoundException("Order not found."));
@@ -46,25 +47,51 @@ public class PaymentService {
     payment.setOrder(order);
     payment.setProvider("Paymongo");
     payment.setPaymentMethod(PaymentMethod.QRPh);
-    payment.setProviderPaymentId(providerPaymentId);
-    payment.setCheckoutUrl(checkoutUrl);
-    payment.setStatus(PaymentStatus.PENDING);
+    payment.setStatus(PaymentStatus.CREATING);
     payment.setAmount(order.getTotal());
     payment.setCurrency("PHP");
-    payment.setPayload(payload);
 
-    paymentRepository.save(payment);
+    Payment paymentCreated = paymentRepository.save(payment);
+
+    return paymentCreated;
+
+  }
+
+
+  // Update Payment
+  @Transactional
+  public void update(Long paymentId, Long orderId, String paymentLinkId, String checkoutUrl, String payload){
+
+    Payment payment = paymentRepository.findByIdAndOrderId(paymentId, orderId)
+      .orElseThrow(() -> new ResourceNotFoundException("Payment not found."));
+
+    payment.setProviderPaymentId(paymentLinkId);
+    payment.setCheckoutUrl(checkoutUrl);
+    payment.setPayload(payload);
+    payment.setStatus(PaymentStatus.PENDING);
+
+  }
+
+
+  // Update status of payment
+  @Transactional
+  public void updateStatus(Long paymentId, Long orderId, PaymentStatus status){
+
+    Payment payment = paymentRepository.findByIdAndOrderId(paymentId, orderId)
+      .orElseThrow(() -> new ResourceNotFoundException("Payment not found."));
+
+    payment.setStatus(status);
 
   }
 
 
   @Transactional
-  public void markPaid(String linkId, BigDecimal paidAmount, Instant paidAt, String rawBody){
+  public void markPaid(String paymentLinkId, BigDecimal paidAmount, Instant paidAt, String rawBody){
 
-    Payment payment = paymentRepository.findByProviderPaymentIdForUpdate(linkId).orElse(null);
+    Payment payment = paymentRepository.findByProviderPaymentIdForUpdate(paymentLinkId).orElse(null);
     
     if(payment == null){
-      log.warn("Webhook for unknown payment link {}", linkId);
+      log.warn("Webhook for unknown payment link {}", paymentLinkId);
       return;
     }
 

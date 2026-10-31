@@ -43,6 +43,7 @@ public class PaymentServiceCreateSuccessfulTest {
   private OrderService orderService;
 
   private Long orderId = 1L;
+  private Long paymentId = 1L;
   private String providerPaymentId = "ORD-123";
   private String checkoutUrl = "url";
   private String payload = "payload";
@@ -50,6 +51,24 @@ public class PaymentServiceCreateSuccessfulTest {
   @Nested
   class CreatePaymentTest{
     
+    @Test
+    void updatePayment_ShouldSuccess_IfPaymentIsFound(){
+  
+      Order order = new Order();
+
+      Payment payment = new Payment();
+      payment.setOrder(order);
+      payment.setStatus(PaymentStatus.CREATING);
+
+      when(paymentRepository.findByIdAndOrderId(paymentId, orderId))
+        .thenReturn(Optional.of(payment));
+
+      paymentService.update(1L, 1L, providerPaymentId, checkoutUrl, payload);
+
+      Assertions.assertEquals(PaymentStatus.PENDING, payment.getStatus());
+  
+    }
+
     @Test
     void createPayment_ShouldSuccess_IfOrderIsFound(){
   
@@ -62,7 +81,7 @@ public class PaymentServiceCreateSuccessfulTest {
       when(paymentRepository.save(any(Payment.class)))
         .thenReturn(paymentCreated);
 
-      paymentService.create(orderId, providerPaymentId, checkoutUrl, payload);
+      paymentService.create(orderId);
 
       verify(paymentRepository, times(1)).save(any(Payment.class));
   

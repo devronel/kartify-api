@@ -1,7 +1,7 @@
 package com.kartify.api.payment.dto;
 
 public record PaymentLink(
-  String paymentId,
+  String paymentLinkId,
   String checkoutUrl,
   String payload
 ){}

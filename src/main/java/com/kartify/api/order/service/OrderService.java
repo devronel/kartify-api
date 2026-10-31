@@ -28,9 +28,13 @@ import com.kartify.api.order.dto.OrderCreateResponse;
 import com.kartify.api.order.dto.OrderResponse;
 import com.kartify.api.order.entity.Order;
 import com.kartify.api.order.entity.OrderItem;
+import com.kartify.api.order.entity.Payment;
 import com.kartify.api.order.enums.OrderStatus;
+import com.kartify.api.order.enums.PaymentMethod;
+import com.kartify.api.order.enums.PaymentStatus;
 import com.kartify.api.order.repository.OrderItemRepository;
 import com.kartify.api.order.repository.OrderRepository;
+import com.kartify.api.order.repository.PaymentRepository;
 import com.kartify.api.product.entity.Product;
 import com.kartify.api.product.entity.ProductVariant;
 import com.kartify.api.product.repository.ProductRepository;
@@ -49,6 +53,7 @@ public class OrderService {
   private final ProductVariantRepository productVariantRepository;
   private final OrderRepository orderRepository;
   private final OrderItemRepository orderItemRepository;
+  private final PaymentRepository paymentRepository;
 
   // Constructor
   public OrderService(
@@ -57,7 +62,8 @@ public class OrderService {
     ProductRepository productRepository,
     ProductVariantRepository productVariantRepository,
     OrderRepository orderRepository,
-    OrderItemRepository orderItemRepository
+    OrderItemRepository orderItemRepository,
+    PaymentRepository paymentRepository
   ){
     this.cartRepository = cartRepository;
     this.userAddressRepository = userAddressRepository;
@@ -65,11 +71,11 @@ public class OrderService {
     this.productVariantRepository = productVariantRepository;
     this.orderRepository = orderRepository;
     this.orderItemRepository = orderItemRepository;
+    this.paymentRepository = paymentRepository;
   }
 
   // Create order
   // OrderCreateResponse
-  @Transactional
   public OrderCreateResponse create(Long userId, OrderCreateRequest payload){
 
     // 1. Get user address
@@ -154,12 +160,13 @@ public class OrderService {
     decrementStock(cartItems);
 
     
-    // 10 Clear the cart
+    // 10. Clear the cart
     cart.getItems().clear();
 
 
     return new OrderCreateResponse(
       orderCreated.getId(),
+      order.getOrderNumber(),
       orderCreated.getTotal()
     );
 

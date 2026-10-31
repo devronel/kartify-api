@@ -37,7 +37,7 @@ public class Payment {
   @Enumerated(EnumType.STRING)
   private PaymentMethod paymentMethod;
 
-  @Column(name = "provider_payment_id", nullable = false, length = 255, unique = true)
+  @Column(name = "provider_payment_id", length = 255, unique = true)
   private String providerPaymentId;
 
   @Column(name = "checkout_url", length = 1000)

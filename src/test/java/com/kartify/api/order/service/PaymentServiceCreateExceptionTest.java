@@ -33,6 +33,7 @@ public class PaymentServiceCreateExceptionTest {
   private PaymentService paymentService;
 
   private Long orderId = 1L;
+  private Long paymentId = 1L;
   private String providerPaymentId = "ORD-123";
   private String checkoutUrl = "url";
   private String payload = "payload";
@@ -42,12 +43,12 @@ public class PaymentServiceCreateExceptionTest {
     
     @Test
     void createOrder_ShouldThrowException_IfOrderNotFound(){
-  
-      when(orderRepository.findById(orderId))
+
+      when(paymentRepository.findByIdAndOrderId(paymentId, orderId))
         .thenReturn(Optional.empty());
   
       Assertions.assertThrows(ResourceNotFoundException.class, () -> {
-        paymentService.create(orderId, providerPaymentId, checkoutUrl, payload);
+        paymentService.update(orderId, paymentId, providerPaymentId, checkoutUrl, payload);
       });
 
       verify(paymentRepository, never()).save(any(Payment.class));

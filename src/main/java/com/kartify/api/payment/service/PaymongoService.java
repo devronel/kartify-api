@@ -11,9 +11,12 @@ import java.util.Base64;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import com.kartify.api.exception.PaymentCreationRejectedException;
+import com.kartify.api.exception.PaymentCreationUnknownException;
 import com.kartify.api.payment.dto.PaymentLink;
 import com.kartify.api.payment.dto.PaymentLinkRequest;
 
+import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
@@ -23,10 +26,7 @@ public class PaymongoService {
   private final String secretKey;
   private final ObjectMapper objectMapper;
 
-  public PaymongoService(
-    @Value("${paymongo.secret-key}") String secretKey,
-    ObjectMapper objectMapper
-  ){
+  public PaymongoService(@Value("${paymongo.secret-key}") String secretKey, ObjectMapper objectMapper){
     this.secretKey = Base64.getEncoder().encodeToString(
       (secretKey + ":").getBytes(StandardCharsets.UTF_8)
     );
@@ -35,6 +35,8 @@ public class PaymongoService {
 
   public PaymentLink process(PaymentLinkRequest data) {
     
+    HttpResponse<String> response;
+
     try {
 
       int amount = data.amount().movePointRight(2).intValueExact();
@@ -56,17 +58,7 @@ public class PaymongoService {
       .method("POST", HttpRequest.BodyPublishers.ofString(payload))
       .build();
   
-      HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());  
-
-      JsonNode pmResponse = objectMapper.readTree(response.body()).path("data");
-      String paymentId = pmResponse.path("id").asString();
-      String checkoutUrl = pmResponse.path("url").asString();
-      
-      return new PaymentLink(
-        paymentId,
-        checkoutUrl,
-        response.body()
-      );
+      response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());  
 
     } catch (IOException e) {
       throw new RuntimeException("PayMongo request failed", e);
@@ -74,6 +66,48 @@ public class PaymongoService {
       Thread.currentThread().interrupt();
       throw new RuntimeException("Request interrupted", e);
     }
+
+    int status = response.statusCode();
+
+    if (status == 201) {
+      try {
+        JsonNode pmResponse = objectMapper.readTree(response.body())
+            .path("data");
+
+        String paymentId = pmResponse.path("id").asString();
+        String checkoutUrl = pmResponse.path("url").asString();
+
+        if (paymentId.isBlank() || checkoutUrl.isBlank()) {
+          throw new PaymentCreationUnknownException(
+            "PayMongo returned an incomplete response."
+          );
+        }
+
+        return new PaymentLink(
+          paymentId,
+          checkoutUrl,
+          response.body()
+        );
+
+      } catch (JacksonException e) {
+        // PayMongo may have created the link, but couldn't parse the response.
+        throw new PaymentCreationUnknownException(
+          "Unable to parse PayMongo's response.",
+          e
+        );
+      }
+    }
+
+    if (status >= 400 && status < 500) {
+        throw new PaymentCreationRejectedException(
+          "PayMongo rejected the request: " + response.body()
+        );
+    }
+
+    // Treat unexpected responses, especially 5xx, conservatively.
+    throw new PaymentCreationUnknownException(
+      "Unexpected PayMongo response: HTTP " + status
+    );
 
   }  
 
