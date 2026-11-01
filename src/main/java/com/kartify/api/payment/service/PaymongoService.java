@@ -55,6 +55,7 @@ public class PaymongoService {
       .header("accept", "application/json")
       .header("content-type", "application/json")
       .header("authorization", "Basic " + secretKey)
+      .header("Idempotency-Key", "mykey")
       .method("POST", HttpRequest.BodyPublishers.ofString(payload))
       .build();
   

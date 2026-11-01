@@ -22,4 +22,7 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
   Optional<Payment> findByIdAndOrderId(Long id, Long orderId);
 
+
+  Optional<Payment> findFirstByOrderIdOrderByCreatedAtDesc(Long orderId);
+
 }

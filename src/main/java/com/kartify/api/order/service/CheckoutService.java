@@ -9,6 +9,7 @@ import com.kartify.api.order.dto.CheckoutResponse;
 import com.kartify.api.order.dto.OrderCreateRequest;
 import com.kartify.api.order.dto.OrderCreateResponse;
 import com.kartify.api.order.dto.OrderPaymentResponse;
+import com.kartify.api.order.dto.PaymentAttemptResponse;
 import com.kartify.api.order.entity.Payment;
 import com.kartify.api.order.enums.PaymentStatus;
 import com.kartify.api.payment.dto.PaymentLink;
@@ -43,12 +44,19 @@ public class CheckoutService {
     try {
 
       PaymentLink paymentProvider = paymongoService.process(new PaymentLinkRequest(
+        order.idempotencyKey(),
         order.totalAmount(),
         "Payment for Order " + order.orderNumber(),
         "Order Number: " + order.orderNumber()
       ));
   
-      paymentService.update(order.paymentId(), order.orderId(), paymentProvider.paymentLinkId(), paymentProvider.checkoutUrl(), paymentProvider.payload());
+      paymentService.update(
+        order.paymentId(), 
+        order.orderId(), 
+        paymentProvider.paymentLinkId(), 
+        paymentProvider.checkoutUrl(), 
+        paymentProvider.payload()
+      );
   
       return new CheckoutResponse(
         paymentProvider.paymentLinkId(), 
@@ -60,6 +68,43 @@ public class CheckoutService {
       throw e;
     } catch (PaymentCreationUnknownException e) {
       paymentService.updateStatus(order.paymentId(), order.orderId(), PaymentStatus.CREATION_UNKNOWN);
+      throw e;
+    }
+
+  }
+
+
+  // Retry Payment
+  public CheckoutResponse retryPayment(Long userId, Long orderId){
+
+    PaymentAttemptResponse attemp = paymentService.prepareRetry(userId, orderId);
+
+    try {
+
+      PaymentLink paymentProvider = paymongoService.process(new PaymentLinkRequest(
+        attemp.idempotencyKey(),
+        attemp.totalAmount(),
+        "Payment for Order " + attemp.orderNumber(),
+        "Order Number: " + attemp.orderNumber()
+      ));
+
+      paymentService.completePaymentSetup(
+        attemp.paymentId(), 
+        paymentProvider.paymentLinkId(), 
+        paymentProvider.checkoutUrl(), 
+        paymentProvider.payload()
+      );
+
+      return new CheckoutResponse(
+        paymentProvider.paymentLinkId(),
+        paymentProvider.checkoutUrl()
+      );
+
+    } catch (PaymentCreationRejectedException e) {
+      paymentService.updateStatus(attemp.paymentId(), attemp.orderId(), PaymentStatus.SETUP_FAILED);
+      throw e;
+    } catch (PaymentCreationUnknownException e) {
+      paymentService.updateStatus(attemp.paymentId(), attemp.orderId(), PaymentStatus.CREATION_UNKNOWN);
       throw e;
     }
 
@@ -78,7 +123,8 @@ public class CheckoutService {
       order.orderId(),
       payment.getId(),
       order.orderNumber(),
-      order.totalAmount()
+      order.totalAmount(),
+      payment.getIdempotencyKey()
     );
     
   }

@@ -2,6 +2,7 @@ package com.kartify.api.order.service;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.kartify.api.exception.ResourceNotFoundException;
+import com.kartify.api.order.dto.PaymentAttemptResponse;
 import com.kartify.api.order.entity.Order;
 import com.kartify.api.order.entity.Payment;
 import com.kartify.api.order.enums.OrderStatus;
@@ -43,6 +45,8 @@ public class PaymentService {
     Order order = orderRepository.findById(orderId)
       .orElseThrow(() -> new ResourceNotFoundException("Order not found."));
 
+    String idempotencyKey = "idm_key_" + UUID.randomUUID().toString().replace("-", "");
+
     Payment payment = new Payment();
     payment.setOrder(order);
     payment.setProvider("Paymongo");
@@ -50,10 +54,58 @@ public class PaymentService {
     payment.setStatus(PaymentStatus.CREATING);
     payment.setAmount(order.getTotal());
     payment.setCurrency("PHP");
+    payment.setIdempotencyKey(idempotencyKey);
 
     Payment paymentCreated = paymentRepository.save(payment);
 
     return paymentCreated;
+
+  }
+
+
+  // Create attemp for payment record
+  public Payment createAttempt(Order order, String idempotencyKey){
+
+    Payment payment = new Payment();
+
+    payment.setOrder(order);
+    payment.setIdempotencyKey(idempotencyKey);
+    payment.setStatus(PaymentStatus.CREATING);
+
+    Payment savedPayment = paymentRepository.save(payment);
+
+    return savedPayment;
+
+  }
+
+
+  // Find attempt payment
+  // @Transactional(readOnly = true)
+  // public PaymentAttemptResponse findAttempt(Long paymentId) {
+
+  //   Payment payment = paymentRepository.findById(paymentId)
+  //     .orElseThrow(() -> new RuntimeException("Payment not found"));
+
+  //   return new PaymentAttemptResponse(
+  //     payment.getId(),
+  //     payment.getIdempotencyKey()
+  //   );
+
+  // }
+
+
+  @Transactional
+  public void completePaymentSetup(Long paymentId, String providerPaymentId, String checkoutUrl, String payload) {
+
+    Payment payment = paymentRepository.findById(paymentId)
+      .orElseThrow(() -> new RuntimeException("Payment not found"));
+
+    payment.setProviderPaymentId(providerPaymentId);
+    payment.setCheckoutUrl(checkoutUrl);
+    payment.setPayload(payload);
+    payment.setStatus(PaymentStatus.PENDING);
+
+    paymentRepository.save(payment);
 
   }
 
@@ -85,6 +137,7 @@ public class PaymentService {
   }
 
 
+  // Mark payment PAID
   @Transactional
   public void markPaid(String paymentLinkId, BigDecimal paidAmount, Instant paidAt, String rawBody){
 
@@ -120,4 +173,53 @@ public class PaymentService {
 
   }
 
+
+  // Prepare retry payment
+  @Transactional
+  public PaymentAttemptResponse prepareRetry(Long userId, Long orderId){
+
+    Order order = orderRepository.findByIdAndUseridForUpdate(orderId, userId)
+      .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+
+    Payment payment = paymentRepository.findFirstByOrderIdOrderByCreatedAtDesc(order.getId())
+      .orElseThrow(() -> new ResourceNotFoundException("Payment not found"));
+
+
+    if(payment.getStatus() == PaymentStatus.SETUP_FAILED){
+
+      String idempotencyKey = "idm_key_" + UUID.randomUUID().toString().replace("-", "");
+
+      Payment newPayment = createAttempt(order, idempotencyKey);
+
+      return new PaymentAttemptResponse(
+        order.getId(),
+        newPayment.getId(),
+        newPayment.getIdempotencyKey(),
+        order.getTotal(),
+        order.getOrderNumber()
+      );
+
+    } else if(payment.getStatus() == PaymentStatus.CREATION_UNKNOWN){
+
+      return new PaymentAttemptResponse(
+        order.getId(),
+        payment.getId(),
+        payment.getIdempotencyKey(),
+        order.getTotal(),
+        order.getOrderNumber()
+      );
+
+    } else if (payment.getStatus() == PaymentStatus.SUCCEEDED) {
+
+      throw new IllegalStateException("Order has already been paid.");
+
+    } else if (payment.getStatus() == PaymentStatus.CREATING) {
+
+      throw new IllegalStateException("Payment creation is already in progress.");
+
+    }
+
+    throw new IllegalStateException("Payment cannot be retried.");
+
+  }
 }

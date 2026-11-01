@@ -58,6 +58,9 @@ public class Payment {
   @Column(name = "paid_at")
   private Instant paidAt;
 
+  @Column(name = "idempotency_key", unique = true, length = 255)
+  private String idempotencyKey;
+
   // Constructor
   public Payment(){}
 
@@ -93,5 +96,8 @@ public class Payment {
 
   public Instant getPaidAt(){ return paidAt; }
   public void setPaidAt(Instant paidAt){ this.paidAt = paidAt; }
+
+  public String getIdempotencyKey(){ return idempotencyKey; }
+  public void setIdempotencyKey(String idempotencyKey){ this.idempotencyKey = idempotencyKey; }
 
 }

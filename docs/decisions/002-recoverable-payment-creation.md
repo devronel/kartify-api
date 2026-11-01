@@ -89,6 +89,8 @@ Since PayMongo is an external service, its operations cannot be rolled back usin
 - [x] Implement the new checkout execution order.
 - [x] Add payment creation status management.
 - [ ] Implement safe retry handling.
+      - Generate idempotency key and save it to the payments table
+      - If the paymongo response error, use the key from payments to retry the request
 - [ ] Investigate PayMongo idempotency support.
 - [ ] Ensure webhook events can identify the correct local Payment.
 - [ ] Implement recovery for incomplete payment creation attempts.

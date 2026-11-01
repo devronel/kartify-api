@@ -53,7 +53,6 @@ public class OrderService {
   private final ProductVariantRepository productVariantRepository;
   private final OrderRepository orderRepository;
   private final OrderItemRepository orderItemRepository;
-  private final PaymentRepository paymentRepository;
 
   // Constructor
   public OrderService(
@@ -62,8 +61,7 @@ public class OrderService {
     ProductRepository productRepository,
     ProductVariantRepository productVariantRepository,
     OrderRepository orderRepository,
-    OrderItemRepository orderItemRepository,
-    PaymentRepository paymentRepository
+    OrderItemRepository orderItemRepository
   ){
     this.cartRepository = cartRepository;
     this.userAddressRepository = userAddressRepository;
@@ -71,7 +69,6 @@ public class OrderService {
     this.productVariantRepository = productVariantRepository;
     this.orderRepository = orderRepository;
     this.orderItemRepository = orderItemRepository;
-    this.paymentRepository = paymentRepository;
   }
 
   // Create order

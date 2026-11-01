@@ -6,5 +6,6 @@ public record OrderPaymentResponse(
   Long orderId,
   Long paymentId,
   String orderNumber,
-  BigDecimal totalAmount
+  BigDecimal totalAmount,
+  String idempotencyKey
 ) {}
