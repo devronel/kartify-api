@@ -79,21 +79,6 @@ public class PaymentService {
   }
 
 
-  // Find attempt payment
-  // @Transactional(readOnly = true)
-  // public PaymentAttemptResponse findAttempt(Long paymentId) {
-
-  //   Payment payment = paymentRepository.findById(paymentId)
-  //     .orElseThrow(() -> new RuntimeException("Payment not found"));
-
-  //   return new PaymentAttemptResponse(
-  //     payment.getId(),
-  //     payment.getIdempotencyKey()
-  //   );
-
-  // }
-
-
   @Transactional
   public void completePaymentSetup(Long paymentId, String providerPaymentId, String checkoutUrl, String payload) {
 

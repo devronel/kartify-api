@@ -2,6 +2,7 @@ package com.kartify.api.order.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -9,12 +10,15 @@ import static org.mockito.Mockito.when;
 import java.math.BigDecimal;
 import java.util.Optional;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.kartify.api.exception.PaymentCreationRejectedException;
+import com.kartify.api.exception.PaymentCreationUnknownException;
 import com.kartify.api.order.dto.CheckoutResponse;
 import com.kartify.api.order.dto.OrderCreateRequest;
 import com.kartify.api.order.dto.OrderCreateResponse;
@@ -49,6 +53,7 @@ public class CheckoutServiceTest {
     Long orderId = 10L;
     String orderNumber = "ORD-2026-UIUHJHKHK";
     BigDecimal totalAmount = new BigDecimal("1500.00");
+    String idempotencyKey = "idm_key_UIUIKJKLH";
 
     Payment payment = new Payment();
     payment.setStatus(PaymentStatus.CREATING);
@@ -63,7 +68,8 @@ public class CheckoutServiceTest {
       order.orderId(),
       payment.getId(),
       order.orderNumber(),
-      order.totalAmount()
+      order.totalAmount(),
+      idempotencyKey
     );
 
     PaymentLink paymentLink = new PaymentLink(
@@ -97,6 +103,85 @@ public class CheckoutServiceTest {
         paymentLink.checkoutUrl(),
         paymentLink.payload()
     );
+  }
+
+  @Test
+  void placeOrder_ShouldThrowException_WhenReturnPaymentCreationRejectedException() {
+
+    Long userId = 1L;
+    OrderCreateRequest payload = mock(OrderCreateRequest.class);
+
+    Long orderId = 10L;
+    String orderNumber = "ORD-2026-UIUHJHKHK";
+    BigDecimal totalAmount = new BigDecimal("1500.00");
+
+    Payment payment = new Payment();
+    payment.setStatus(PaymentStatus.CREATING);
+
+    Payment updatedPayment = new Payment();
+    updatedPayment.setStatus(PaymentStatus.SETUP_FAILED);
+
+    OrderCreateResponse order = new OrderCreateResponse(
+      orderId,
+      orderNumber,
+      totalAmount
+    );
+
+    when(orderService.create(userId, payload))
+      .thenReturn(order);
+
+    when(paymentService.create(order.orderId()))
+      .thenReturn(payment);
+
+    when(paymongoService.process(any(PaymentLinkRequest.class)))
+      .thenThrow(PaymentCreationRejectedException.class);
+
+    // Act
+    Assertions.assertThrows(PaymentCreationRejectedException.class, () -> {
+      checkoutService.placeOrder(userId, payload);
+    });
+    verify(paymentService).updateStatus(payment.getId(), order.orderId(), PaymentStatus.SETUP_FAILED);
+
+  }
+
+
+  @Test
+  void placeOrder_ShouldThrowException_WhenReturnPaymentCreationUnknownException() {
+
+    Long userId = 1L;
+    OrderCreateRequest payload = mock(OrderCreateRequest.class);
+
+    Long orderId = 10L;
+    String orderNumber = "ORD-2026-UIUHJHKHK";
+    BigDecimal totalAmount = new BigDecimal("1500.00");
+
+    Payment payment = new Payment();
+    payment.setStatus(PaymentStatus.CREATING);
+
+    Payment updatedPayment = new Payment();
+    updatedPayment.setStatus(PaymentStatus.SETUP_FAILED);
+
+    OrderCreateResponse order = new OrderCreateResponse(
+      orderId,
+      orderNumber,
+      totalAmount
+    );
+
+    when(orderService.create(userId, payload))
+      .thenReturn(order);
+
+    when(paymentService.create(order.orderId()))
+      .thenReturn(payment);
+
+    when(paymongoService.process(any(PaymentLinkRequest.class)))
+      .thenThrow(PaymentCreationUnknownException.class);
+
+    // Act
+    Assertions.assertThrows(PaymentCreationUnknownException.class, () -> {
+      checkoutService.placeOrder(userId, payload);
+    });
+    verify(paymentService).updateStatus(payment.getId(), order.orderId(), PaymentStatus.CREATION_UNKNOWN);
+
   }
 
 }
