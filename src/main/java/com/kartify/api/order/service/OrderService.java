@@ -25,12 +25,17 @@ import com.kartify.api.exception.FieldValidationException;
 import com.kartify.api.exception.ResourceNotFoundException;
 import com.kartify.api.order.dto.OrderCreateRequest;
 import com.kartify.api.order.dto.OrderCreateResponse;
+import com.kartify.api.order.dto.OrderDetailsResponse;
+import com.kartify.api.order.dto.OrderItemsResponse;
 import com.kartify.api.order.dto.OrderResponse;
 import com.kartify.api.order.entity.Order;
 import com.kartify.api.order.entity.OrderItem;
+import com.kartify.api.order.entity.Payment;
 import com.kartify.api.order.enums.OrderStatus;
+import com.kartify.api.order.enums.PaymentStatus;
 import com.kartify.api.order.repository.OrderItemRepository;
 import com.kartify.api.order.repository.OrderRepository;
+import com.kartify.api.order.repository.PaymentRepository;
 import com.kartify.api.product.entity.Product;
 import com.kartify.api.product.entity.ProductVariant;
 import com.kartify.api.product.repository.ProductRepository;
@@ -49,6 +54,7 @@ public class OrderService {
   private final ProductVariantRepository productVariantRepository;
   private final OrderRepository orderRepository;
   private final OrderItemRepository orderItemRepository;
+  private final PaymentRepository paymentRepository;
 
   // Constructor
   public OrderService(
@@ -57,7 +63,8 @@ public class OrderService {
     ProductRepository productRepository,
     ProductVariantRepository productVariantRepository,
     OrderRepository orderRepository,
-    OrderItemRepository orderItemRepository
+    OrderItemRepository orderItemRepository,
+    PaymentRepository paymentRepository
   ){
     this.cartRepository = cartRepository;
     this.userAddressRepository = userAddressRepository;
@@ -65,6 +72,7 @@ public class OrderService {
     this.productVariantRepository = productVariantRepository;
     this.orderRepository = orderRepository;
     this.orderItemRepository = orderItemRepository;
+    this.paymentRepository = paymentRepository;
   }
 
   // Create order
@@ -193,16 +201,26 @@ public class OrderService {
 
     List<OrderItem> orderItems = orderItemRepository.findAllByOrderIds(orderIds);
 
+    List<Payment> payments = paymentRepository.findAllDesc(orderIds);
+
     Map<Long, Integer> itemCountByOrderId = orderItems.stream()
       .collect(Collectors.groupingBy(
         orderItem -> orderItem.getOrder().getId(),
         Collectors.summingInt(item -> 1)
       ));
 
+    Map<Long, PaymentStatus> latestPayments = payments.stream()
+      .collect(Collectors.toMap(
+        orderItem -> orderItem.getOrder().getId(),
+        payment -> payment.getStatus(),
+        (first, second) -> first
+      ));
+
     List<OrderResponse> orderResponse = orders.stream()
       .map(order -> new OrderResponse(
         order.getOrderNumber(),
         order.getStatus(),
+        latestPayments.getOrDefault(order.getId(), null),
         order.getTotal(),
         itemCountByOrderId.getOrDefault(order.getId(), 0)
       )).toList();
@@ -215,6 +233,54 @@ public class OrderService {
       orderPage.getTotalPages(),
       orderPage.hasNext(),
       orderPage.hasPrevious()
+    );
+  
+  }
+
+
+  // Get order details
+  public OrderDetailsResponse getOrderDetails(Long userId, Long orderId){
+    
+    Order order = orderRepository.findByIdAndUserId(orderId, userId)
+      .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+
+    Payment payment = paymentRepository.findFirstByOrderIdOrderByCreatedAtDesc(order.getId())
+      .orElseThrow(() -> new ResourceNotFoundException("Payment not Found."));    
+
+    List<OrderItemsResponse> orderItems = order.getOrderItems().stream()
+      .map(item -> new OrderItemsResponse(
+        item.getProductName(),
+        item.getVariantLabel(),
+        item.getProductImage(),
+        item.getPrice(),
+        item.getQuantity(),
+        item.getLineTotal()
+      ))
+      .toList();
+
+    return new OrderDetailsResponse(
+      order.getOrderNumber(),
+      order.getStatus(),
+      order.getSubtotal(),
+      order.getShippingFee(),
+      order.getDiscountAmount(),
+      order.getTotal(),
+      order.getShippingRecipientName(),
+      order.getShippingPhone(),
+      order.getShippingAddressLine1(),
+      order.getShippingAddressLine2(),
+      order.getShippingBarangay(),
+      order.getShippingCity(),
+      order.getShippingProvince(),
+      order.getShippingRegion(),
+      order.getShippingPostalCode(),
+      order.getShippingCountry(),
+      order.getNotes(),
+      orderItems,
+      payment.getPaymentMethod(),
+      payment.getStatus(),
+      payment.getCheckoutUrl(),
+      payment.getPaidAt()
     );
   
   }

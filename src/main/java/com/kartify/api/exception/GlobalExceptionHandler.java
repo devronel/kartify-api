@@ -108,6 +108,7 @@ public class GlobalExceptionHandler {
     }
 
 
+    // Exception handler for resource not found like finding data in the database
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<Map<String, Object>> handleResourceNotFound(ResourceNotFoundException ex) {
 
@@ -123,6 +124,7 @@ public class GlobalExceptionHandler {
     }
 
 
+    // Exception handler for Insufficient Product Stock
     @ExceptionHandler(InsufficientStockException.class)
     public ResponseEntity<Map<String, Object>> handleInsufficientStock(InsufficientStockException ex) {
 
@@ -134,6 +136,38 @@ public class GlobalExceptionHandler {
         body.put("message", ex.getMessage());
 
         return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+
+    }
+
+
+    // Exception handler for Payment Provider error if it reject the request
+    @ExceptionHandler(PaymentCreationRejectedException.class)
+    public ResponseEntity<Map<String, Object>> handlePaymentCreateRejected(PaymentCreationRejectedException ex) {
+
+        log.warn("We couldn't create your payment session. Your order has been created, but payment setup was unsuccessful. Please try again.", ex);
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", HttpStatus.BAD_GATEWAY.value());
+        body.put("message", "We couldn't create your payment session. Your order has been created, but payment setup was unsuccessful. Please try again.");
+
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(body);
+
+    }
+
+
+    // Exception handler for Payment creation unknown, cause by possible request timeout
+    @ExceptionHandler(PaymentCreationUnknownException.class)
+    public ResponseEntity<Map<String, Object>> handlePaymentCreationUnknown(PaymentCreationUnknownException ex) {
+
+        log.warn("We couldn't confirm whether your payment session was created. Please check your order before trying again.", ex);
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", HttpStatus.GATEWAY_TIMEOUT.value());
+        body.put("message", "We couldn't confirm whether your payment session was created. Please check your order before trying again.");
+
+        return ResponseEntity.status(HttpStatus.GATEWAY_TIMEOUT).body(body);
 
     }
 }

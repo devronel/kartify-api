@@ -1,5 +1,6 @@
 package com.kartify.api.order.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -24,5 +25,13 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
 
   Optional<Payment> findFirstByOrderIdOrderByCreatedAtDesc(Long orderId);
+
+
+  @Query("""
+    SELECT payment FROM Payment payment
+    WHERE payment.order.id IN :orderIds
+    ORDER BY payment.createdAt DESC
+  """)
+  List<Payment> findAllDesc(@Param("orderIds") List<Long> orderIds);
 
 }

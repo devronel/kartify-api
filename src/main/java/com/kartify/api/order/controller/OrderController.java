@@ -9,10 +9,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.kartify.api.order.dto.OrderDetailsResponse;
 import com.kartify.api.order.dto.OrderResponse;
 import com.kartify.api.order.service.OrderService;
 import com.kartify.api.security.CustomUserDetails;
@@ -46,6 +48,20 @@ public class OrderController {
     Pageable pageable = PageRequest.of(page-1, pageSize, Sort.by(Sort.Direction.DESC, "createdAt"));
 
     PaginationResponse<OrderResponse> order = orderService.getAllOrder(principal.getId(), pageable);
+
+    return ResponseEntity.ok(order);
+
+  }
+
+
+  // Get order by id
+  @GetMapping("/{id}")
+  public ResponseEntity<OrderDetailsResponse> getOrderDetails(
+    @AuthenticationPrincipal CustomUserDetails principal,
+    @PathVariable Long id
+  ){
+
+    OrderDetailsResponse order = orderService.getOrderDetails(principal.getId(), id);
 
     return ResponseEntity.ok(order);
 
