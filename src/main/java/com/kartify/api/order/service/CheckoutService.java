@@ -1,16 +1,15 @@
 package com.kartify.api.order.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.kartify.api.exception.PaymentCreationRejectedException;
 import com.kartify.api.exception.PaymentCreationUnknownException;
 import com.kartify.api.order.dto.CheckoutResponse;
 import com.kartify.api.order.dto.OrderCreateRequest;
-import com.kartify.api.order.dto.OrderCreateResponse;
 import com.kartify.api.order.dto.OrderPaymentResponse;
 import com.kartify.api.order.dto.PaymentAttemptResponse;
-import com.kartify.api.order.entity.Payment;
 import com.kartify.api.order.enums.PaymentStatus;
 import com.kartify.api.payment.dto.PaymentLink;
 import com.kartify.api.payment.dto.PaymentLinkRequest;
@@ -19,8 +18,8 @@ import com.kartify.api.payment.service.PaymongoService;
 @Service
 public class CheckoutService {
 
+  private static final Logger log = LoggerFactory.getLogger(CheckoutService.class);
   
-  private final OrderService orderService;
   private final PaymongoService paymongoService;
   private final PaymentService paymentService;
 
@@ -30,7 +29,6 @@ public class CheckoutService {
     PaymongoService paymongoService,
     PaymentService paymentService
   ){
-    this.orderService = orderService;
     this.paymongoService = paymongoService;
     this.paymentService = paymentService;
   }
@@ -39,7 +37,7 @@ public class CheckoutService {
   // Process and Pay the Order
   public CheckoutResponse placeOrder(Long userId,  OrderCreateRequest payload){
 
-    OrderPaymentResponse order = createOrderAndPayment(userId, payload);
+    OrderPaymentResponse order = paymentService.createOrderAndPayment(userId, payload);
 
     try {
 
@@ -108,25 +106,6 @@ public class CheckoutService {
       throw e;
     }
 
-  }
-
-
-  // Create order and payment transactions
-  @Transactional
-  public OrderPaymentResponse createOrderAndPayment(Long userId,  OrderCreateRequest payload){
-
-    OrderCreateResponse order = orderService.create(userId, payload);
-
-    Payment payment = paymentService.create(order.orderId());
-
-    return new OrderPaymentResponse(
-      order.orderId(),
-      payment.getId(),
-      order.orderNumber(),
-      order.totalAmount(),
-      payment.getIdempotencyKey()
-    );
-    
   }
 
 }

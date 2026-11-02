@@ -5,6 +5,7 @@ import java.time.Instant;
 
 import com.kartify.api.order.enums.PaymentMethod;
 import com.kartify.api.order.enums.PaymentStatus;
+import com.kartify.api.shared.BaseEntity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -20,7 +21,7 @@ import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "payments")
-public class Payment {
+public class Payment extends BaseEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)

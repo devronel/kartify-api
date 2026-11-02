@@ -10,6 +10,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.kartify.api.exception.ResourceNotFoundException;
+import com.kartify.api.order.dto.OrderCreateRequest;
+import com.kartify.api.order.dto.OrderCreateResponse;
+import com.kartify.api.order.dto.OrderPaymentResponse;
 import com.kartify.api.order.dto.PaymentAttemptResponse;
 import com.kartify.api.order.entity.Order;
 import com.kartify.api.order.entity.Payment;
@@ -206,5 +209,23 @@ public class PaymentService {
 
     throw new IllegalStateException("Payment cannot be retried.");
 
+  }
+
+
+  @Transactional
+  public OrderPaymentResponse createOrderAndPayment(Long userId,  OrderCreateRequest payload){
+    
+    OrderCreateResponse order = orderService.create(userId, payload);
+    
+    Payment payment = this.create(order.orderId());
+
+    return new OrderPaymentResponse(
+      order.orderId(),
+      payment.getId(),
+      order.orderNumber(),
+      order.totalAmount(),
+      payment.getIdempotencyKey()
+    );
+    
   }
 }
