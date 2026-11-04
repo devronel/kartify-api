@@ -35,7 +35,7 @@ public class OrderController {
 
   // Get all the order by user
   @GetMapping
-  public ResponseEntity<PaginationResponse<OrderResponse>> getAllOrder(
+  public ResponseEntity<PaginationResponse<OrderResponse>> getAll(
     @AuthenticationPrincipal CustomUserDetails principal,
     @RequestParam(defaultValue = "1") int page,
     @RequestParam(defaultValue = "" + DEFAULT_PAGE_SIZE) int pageSize
@@ -47,7 +47,7 @@ public class OrderController {
 
     Pageable pageable = PageRequest.of(page-1, pageSize, Sort.by(Sort.Direction.DESC, "createdAt"));
 
-    PaginationResponse<OrderResponse> order = orderService.getAllOrder(principal.getId(), pageable);
+    PaginationResponse<OrderResponse> order = orderService.getAll(principal.getId(), pageable);
 
     return ResponseEntity.ok(order);
 
@@ -55,13 +55,13 @@ public class OrderController {
 
 
   // Get order by id
-  @GetMapping("/{id}")
-  public ResponseEntity<OrderDetailsResponse> getOrderDetails(
+  @GetMapping("/{orderNumber}")
+  public ResponseEntity<OrderDetailsResponse> getDetail(
     @AuthenticationPrincipal CustomUserDetails principal,
-    @PathVariable Long id
+    @PathVariable String orderNumber
   ){
 
-    OrderDetailsResponse order = orderService.getOrderDetails(principal.getId(), id);
+    OrderDetailsResponse order = orderService.getDetail(principal.getId(), orderNumber);
 
     return ResponseEntity.ok(order);
 

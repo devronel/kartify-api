@@ -1,6 +1,7 @@
 package com.kartify.api.order.service;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.Year;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -28,6 +29,8 @@ import com.kartify.api.order.dto.OrderCreateResponse;
 import com.kartify.api.order.dto.OrderDetailsResponse;
 import com.kartify.api.order.dto.OrderItemsResponse;
 import com.kartify.api.order.dto.OrderResponse;
+import com.kartify.api.order.dto.OrderStatusHistoryResponse;
+import com.kartify.api.order.dto.PaymentSummaryResponse;
 import com.kartify.api.order.entity.Order;
 import com.kartify.api.order.entity.OrderItem;
 import com.kartify.api.order.entity.Payment;
@@ -47,6 +50,8 @@ import com.kartify.api.user.repository.UserAddressRepository;
 
 @Service
 public class OrderService {
+
+  public static final Duration PENDING_HOLD = Duration.ofMinutes(30);
 
   private final CartRepository cartRepository;
   private final UserAddressRepository userAddressRepository;
@@ -191,7 +196,7 @@ public class OrderService {
 
 
   // Get all user orders
-  public PaginationResponse<OrderResponse> getAllOrder(Long userId, Pageable pageable){
+  public PaginationResponse<OrderResponse> getAll(Long userId, Pageable pageable){
     
     Page<Order> orderPage = orderRepository.findByUserId(userId, pageable);
 
@@ -209,21 +214,34 @@ public class OrderService {
         Collectors.summingInt(item -> 1)
       ));
 
-    Map<Long, PaymentStatus> latestPayments = payments.stream()
+    Map<Long, PaymentSummaryResponse> latestPayments = payments.stream()
       .collect(Collectors.toMap(
         orderItem -> orderItem.getOrder().getId(),
-        payment -> payment.getStatus(),
+        payment -> new PaymentSummaryResponse(
+          payment.getStatus(),
+          payment.getPaymentMethod(),
+          payment.getCheckoutUrl(),
+          payment.getPaidAt()
+        ),
         (first, second) -> first
       ));
 
     List<OrderResponse> orderResponse = orders.stream()
-      .map(order -> new OrderResponse(
-        order.getOrderNumber(),
-        order.getStatus(),
-        latestPayments.getOrDefault(order.getId(), null),
-        order.getTotal(),
-        itemCountByOrderId.getOrDefault(order.getId(), 0)
-      )).toList();
+      .map(order -> {
+
+        boolean pending = order.getStatus() == OrderStatus.PENDING;
+
+        return new OrderResponse(
+          order.getOrderNumber(),
+          order.getStatus(),
+          latestPayments.getOrDefault(order.getId(), null).status(),
+          order.getTotal(),
+          itemCountByOrderId.getOrDefault(order.getId(), 0),
+          pending,
+          pending ? order.getCreatedAt().plus(PENDING_HOLD) : null
+        );
+
+      }).toList();
 
     return new PaginationResponse<>(
       orderResponse,
@@ -239,14 +257,16 @@ public class OrderService {
 
 
   // Get order details
-  public OrderDetailsResponse getOrderDetails(Long userId, Long orderId){
+  public OrderDetailsResponse getDetail(Long userId, String orderNumber){
     
-    Order order = orderRepository.findByIdAndUserId(orderId, userId)
+    Order order = orderRepository.findByOrderNumberAndUserId(orderNumber, userId)
       .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
 
     Payment payment = paymentRepository.findFirstByOrderIdOrderByCreatedAtDesc(order.getId())
       .orElseThrow(() -> new ResourceNotFoundException("Payment not Found."));    
 
+    
+    // Get the list of order items
     List<OrderItemsResponse> orderItems = order.getOrderItems().stream()
       .map(item -> new OrderItemsResponse(
         item.getProductName(),
@@ -257,6 +277,26 @@ public class OrderService {
         item.getLineTotal()
       ))
       .toList();
+
+    
+    // Get the latest payment summary
+    PaymentSummaryResponse paymentSummaryResponse = new PaymentSummaryResponse(
+      payment.getStatus(),
+      payment.getPaymentMethod(),
+      payment.getCheckoutUrl(),
+      payment.getPaidAt()
+    );
+
+    // Get the list of order status history
+    List<OrderStatusHistoryResponse> timeline = order.getOrderStatusHistories()
+      .stream()
+      .map(statusHistory -> new OrderStatusHistoryResponse(
+        statusHistory.getStatus(),
+        statusHistory.getCreatedAt()
+      ))
+      .toList();
+
+    boolean pending = order.getStatus() == OrderStatus.PAID;
 
     return new OrderDetailsResponse(
       order.getOrderNumber(),
@@ -276,11 +316,11 @@ public class OrderService {
       order.getShippingPostalCode(),
       order.getShippingCountry(),
       order.getNotes(),
+      pending,
+      pending ? order.getCreatedAt().plus(PENDING_HOLD) : null,
       orderItems,
-      payment.getPaymentMethod(),
-      payment.getStatus(),
-      payment.getCheckoutUrl(),
-      payment.getPaidAt()
+      paymentSummaryResponse,
+      timeline
     );
   
   }

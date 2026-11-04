@@ -1,12 +1,10 @@
 package com.kartify.api.order.dto;
 
 import java.math.BigDecimal;
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import com.kartify.api.order.enums.OrderStatus;
-import com.kartify.api.order.enums.PaymentMethod;
-import com.kartify.api.order.enums.PaymentStatus;
 
 public record OrderDetailsResponse(
   String orderNumber,
@@ -28,11 +26,12 @@ public record OrderDetailsResponse(
   String shippingPostalCode,
   String shippingCountry,
   String notes,
+  Boolean canPay,
+  LocalDateTime expiresAt,
 
   List<OrderItemsResponse> orderItems,
 
-  PaymentMethod paymentMethod,
-  PaymentStatus paymentStatus,
-  String checkoutUrl,
-  Instant paidAt
+  PaymentSummaryResponse payment,
+
+  List<OrderStatusHistoryResponse> timeline
 ) {}
