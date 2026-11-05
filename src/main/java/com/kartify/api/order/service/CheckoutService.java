@@ -140,7 +140,6 @@ public class CheckoutService {
     Cart cart = cartRepository.findByUserId(userId)
       .orElseThrow(() -> new ResourceNotFoundException("Cart not found."));
 
-    
       List<CartItem> cartItems = cart.getItems();
 
     
@@ -151,6 +150,7 @@ public class CheckoutService {
 
     List<CheckoutCartItemResponse> items = cartItems.stream()
       .map(item -> new CheckoutCartItemResponse(
+        item.getId(),
         fileStorage.getUrl("files/public/product/images/" + item.getProduct().getPrimaryImage()),
         item.getProduct().getName(),
         item.getProductVariant() != null ? item.getProductVariant().getAttributeValueName() : null,
@@ -163,6 +163,8 @@ public class CheckoutService {
 
     List<AddressInformationResponse> userAddress = addresses.stream()
       .map(address -> new AddressInformationResponse(
+        address.getId(),
+        address.getLabel(),
         address.getRecipientName(),
         address.getPhone(),
         address.getAddressLine1(),
@@ -172,7 +174,8 @@ public class CheckoutService {
         address.getProvince(),
         address.getRegion(),
         address.getPostalCode(),
-        address.getCountry()
+        address.getCountry(),
+        address.getIsDefault()
       ))
       .toList();
 

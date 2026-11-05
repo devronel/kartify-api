@@ -1,6 +1,8 @@
 package com.kartify.api.order.dto;
 
 public record AddressInformationResponse(
+  Long id,
+  String label,
   String shippingRecipientName,
   String shippingPhone,
   String shippingAddressLine1,
@@ -10,5 +12,6 @@ public record AddressInformationResponse(
   String shippingProvince,
   String shippingRegion,
   String shippingPostalCode,
-  String shippingCountry
+  String shippingCountry,
+  Boolean isDefault
 ) {}
