@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +22,7 @@ import com.kartify.api.cart.entity.Cart;
 import com.kartify.api.cart.entity.CartItem;
 import com.kartify.api.cart.enums.ItemProblemReason;
 import com.kartify.api.cart.repository.CartRepository;
+import com.kartify.api.contract.FileStorage;
 import com.kartify.api.exception.CartItemsUnavailableException;
 import com.kartify.api.exception.FieldValidationException;
 import com.kartify.api.exception.ResourceNotFoundException;
@@ -35,7 +37,6 @@ import com.kartify.api.order.entity.Order;
 import com.kartify.api.order.entity.OrderItem;
 import com.kartify.api.order.entity.Payment;
 import com.kartify.api.order.enums.OrderStatus;
-import com.kartify.api.order.enums.PaymentStatus;
 import com.kartify.api.order.repository.OrderItemRepository;
 import com.kartify.api.order.repository.OrderRepository;
 import com.kartify.api.order.repository.PaymentRepository;
@@ -60,6 +61,7 @@ public class OrderService {
   private final OrderRepository orderRepository;
   private final OrderItemRepository orderItemRepository;
   private final PaymentRepository paymentRepository;
+  private final FileStorage fileStorage;
 
   // Constructor
   public OrderService(
@@ -69,7 +71,8 @@ public class OrderService {
     ProductVariantRepository productVariantRepository,
     OrderRepository orderRepository,
     OrderItemRepository orderItemRepository,
-    PaymentRepository paymentRepository
+    PaymentRepository paymentRepository,
+    FileStorage fileStorage
   ){
     this.cartRepository = cartRepository;
     this.userAddressRepository = userAddressRepository;
@@ -78,6 +81,7 @@ public class OrderService {
     this.orderRepository = orderRepository;
     this.orderItemRepository = orderItemRepository;
     this.paymentRepository = paymentRepository;
+    this.fileStorage = fileStorage;
   }
 
   // Create order
@@ -196,9 +200,9 @@ public class OrderService {
 
 
   // Get all user orders
-  public PaginationResponse<OrderResponse> getAll(Long userId, Pageable pageable){
-    
-    Page<Order> orderPage = orderRepository.findByUserId(userId, pageable);
+  public PaginationResponse<OrderResponse> getAll(Long userId, OrderStatus status, Pageable pageable){
+
+    Page<Order> orderPage = orderRepository.findByUserId(userId, status, pageable);
 
     List<Order> orders = orderPage.getContent();
 
@@ -208,12 +212,31 @@ public class OrderService {
 
     List<Payment> payments = paymentRepository.findAllDesc(orderIds);
 
+    // Count all the order items
     Map<Long, Integer> itemCountByOrderId = orderItems.stream()
       .collect(Collectors.groupingBy(
         orderItem -> orderItem.getOrder().getId(),
         Collectors.summingInt(item -> 1)
       ));
 
+
+    // Create a map for order items
+    Map<Long, List<OrderItemsResponse>> orderItemsMap = orderItems.stream()
+    .collect(Collectors.groupingBy(
+      item -> item.getOrder().getId(),
+      Collectors.mapping(orderItem -> new OrderItemsResponse(
+        orderItem.getId(),
+        orderItem.getProductName(),
+        orderItem.getVariantLabel(),
+        fileStorage.getUrl("files/public/product/images/" + orderItem.getProductImage()),
+        orderItem.getPrice(),
+        orderItem.getQuantity(),
+        orderItem.getLineTotal()
+      ), Collectors.toList())
+    ));
+
+
+    // Create a map for latest payment in each order
     Map<Long, PaymentSummaryResponse> latestPayments = payments.stream()
       .collect(Collectors.toMap(
         orderItem -> orderItem.getOrder().getId(),
@@ -238,7 +261,8 @@ public class OrderService {
           order.getTotal(),
           itemCountByOrderId.getOrDefault(order.getId(), 0),
           pending,
-          pending ? order.getCreatedAt().plus(PENDING_HOLD) : null
+          pending ? order.getCreatedAt().plus(PENDING_HOLD) : null,
+          orderItemsMap.get(order.getId()).stream().limit(3).toList()
         );
 
       }).toList();
@@ -269,6 +293,7 @@ public class OrderService {
     // Get the list of order items
     List<OrderItemsResponse> orderItems = order.getOrderItems().stream()
       .map(item -> new OrderItemsResponse(
+        item.getId(),
         item.getProductName(),
         item.getVariantLabel(),
         item.getProductImage(),

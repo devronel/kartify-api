@@ -21,7 +21,6 @@ import com.kartify.api.order.dto.OrderCreateRequest;
 import com.kartify.api.order.dto.OrderCreateResponse;
 import com.kartify.api.order.entity.Order;
 import com.kartify.api.order.enums.OrderStatus;
-import com.kartify.api.order.enums.PaymentMethod;
 import com.kartify.api.order.repository.OrderRepository;
 import com.kartify.api.order.repository.PaymentRepository;
 import com.kartify.api.product.entity.Product;
@@ -58,10 +57,7 @@ public class OrderServiceCreateSuccessfulTest {
   private final Long userId = 1L;
 
   private OrderCreateRequest createOrderRequest(){
-    return new OrderCreateRequest(
-      1L,
-      PaymentMethod.QRPh
-    );
+    return new OrderCreateRequest(1L);
   }
 
 

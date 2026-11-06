@@ -1,11 +1,8 @@
 package com.kartify.api.order.controller;
 
-import java.util.List;
-
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.kartify.api.order.dto.OrderDetailsResponse;
 import com.kartify.api.order.dto.OrderResponse;
+import com.kartify.api.order.enums.OrderStatus;
 import com.kartify.api.order.service.OrderService;
 import com.kartify.api.security.CustomUserDetails;
 import com.kartify.api.shared.dto.PaginationResponse;
@@ -38,7 +36,8 @@ public class OrderController {
   public ResponseEntity<PaginationResponse<OrderResponse>> getAll(
     @AuthenticationPrincipal CustomUserDetails principal,
     @RequestParam(defaultValue = "1") int page,
-    @RequestParam(defaultValue = "" + DEFAULT_PAGE_SIZE) int pageSize
+    @RequestParam(defaultValue = "" + DEFAULT_PAGE_SIZE) int pageSize,
+    @RequestParam(required = false) OrderStatus status
   ){
 
     if(pageSize < 1 || pageSize > MAX_PAGE_SIZE){
@@ -47,7 +46,7 @@ public class OrderController {
 
     Pageable pageable = PageRequest.of(page-1, pageSize, Sort.by(Sort.Direction.DESC, "createdAt"));
 
-    PaginationResponse<OrderResponse> order = orderService.getAll(principal.getId(), pageable);
+    PaginationResponse<OrderResponse> order = orderService.getAll(principal.getId(), status, pageable);
 
     return ResponseEntity.ok(order);
 

@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.kartify.api.order.entity.Order;
+import com.kartify.api.order.enums.OrderStatus;
 
 import jakarta.persistence.LockModeType;
 
@@ -29,7 +30,16 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
 
   // Get all order by userId
-  Page<Order> findByUserId(Long userId, Pageable pageable);
+  @Query("""
+    SELECT order FROM Order order
+    WHERE order.user.id = :userId
+    AND (:status IS NULL OR order.status = :status) 
+  """)
+  Page<Order> findByUserId(
+    @Param("userId") Long userId, 
+    @Param("status") OrderStatus status,
+    Pageable pageable
+  );
 
 
   Optional<Order> findByIdAndUserId(Long id, Long userId);

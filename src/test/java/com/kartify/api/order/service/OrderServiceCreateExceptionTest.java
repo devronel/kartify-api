@@ -46,10 +46,7 @@ public class OrderServiceCreateExceptionTest {
   private final Long userId = 1L;
 
   private OrderCreateRequest createOrderRequest(){
-    return new OrderCreateRequest(
-      1L,
-      PaymentMethod.QRPh
-    );
+    return new OrderCreateRequest(1L);
   }
 
 
