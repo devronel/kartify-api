@@ -170,4 +170,24 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.GATEWAY_TIMEOUT).body(body);
 
     }
+
+
+    // 422 with every unavailable cart item in errors.items (order was rolled back, nothing saved)
+    @ExceptionHandler(CartItemsUnavailableException.class)
+    public ResponseEntity<Map<String, Object>> handleCartItemUnavailable(CartItemsUnavailableException ex) {
+
+        log.warn("Checkout blocked: unavailable cart items {}", ex.getProblems(), ex);
+
+        Map<String, Object> errors = new HashMap<>();
+        errors.put("items", ex.getProblems());
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", HttpStatus.UNPROCESSABLE_CONTENT.value());
+        body.put("message", "Some items in your cart are unavailable.");
+        body.put("errors", errors);
+
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT).body(body);
+
+    }
 }

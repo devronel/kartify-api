@@ -11,9 +11,10 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -52,6 +53,7 @@ import com.kartify.api.user.repository.UserAddressRepository;
 @Service
 public class OrderService {
 
+  private static final Logger log = LoggerFactory.getLogger(OrderService.class);
   public static final Duration PENDING_HOLD = Duration.ofMinutes(30);
 
   private final CartRepository cartRepository;
@@ -107,6 +109,7 @@ public class OrderService {
     // 4. Collect every problem in the cart items and throw them together
     List<ItemProblem> problems = findProblems(cartItems);
     if (!problems.isEmpty()) {
+      log.warn("Checkout blocked for user {}: {}", userId, problems);
       throw new CartItemsUnavailableException(problems);
     }
 
