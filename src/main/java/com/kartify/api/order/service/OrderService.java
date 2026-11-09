@@ -2,6 +2,7 @@ package com.kartify.api.order.service;
 
 import java.math.BigDecimal;
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.time.Year;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -299,7 +300,7 @@ public class OrderService {
         item.getId(),
         item.getProductName(),
         item.getVariantLabel(),
-        item.getProductImage(),
+        fileStorage.getUrl("files/public/product/images/" + item.getProductImage()),
         item.getPrice(),
         item.getQuantity(),
         item.getLineTotal()
@@ -324,7 +325,11 @@ public class OrderService {
       ))
       .toList();
 
-    boolean pending = order.getStatus() == OrderStatus.PAID;
+
+    LocalDateTime now = LocalDateTime.now();
+    boolean isPayable = order.isPayable(now, PENDING_HOLD);
+    boolean isExpired = order.isExpired(now, PENDING_HOLD);
+    LocalDateTime expiresAt = order.getStatus() == OrderStatus.PENDING ? order.expiresAt(PENDING_HOLD) : null;
 
     return new OrderDetailsResponse(
       order.getOrderNumber(),
@@ -344,8 +349,10 @@ public class OrderService {
       order.getShippingPostalCode(),
       order.getShippingCountry(),
       order.getNotes(),
-      pending,
-      pending ? order.getCreatedAt().plus(PENDING_HOLD) : null,
+      isPayable,
+      isExpired,
+      expiresAt,
+      order.getCreatedAt(),
       orderItems,
       paymentSummaryResponse,
       timeline

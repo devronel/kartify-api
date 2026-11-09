@@ -26,8 +26,10 @@ public record OrderDetailsResponse(
   String shippingPostalCode,
   String shippingCountry,
   String notes,
-  Boolean canPay,
+  Boolean isPayable,
+  Boolean isExpired,
   LocalDateTime expiresAt,
+  LocalDateTime createdAt,
 
   List<OrderItemsResponse> orderItems,
 

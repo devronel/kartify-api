@@ -1,6 +1,8 @@
 package com.kartify.api.order.entity;
 
 import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -166,5 +168,19 @@ public class Order extends BaseEntity {
 
   public String getNotes(){ return notes; }
   public void setNotes(String notes){ this.notes = notes; }
+
   
+  // Helper
+
+  public LocalDateTime expiresAt(Duration hold){
+    return getCreatedAt().plus(hold);
+  }
+
+  public boolean isPayable(LocalDateTime now, Duration hold){
+    return status == OrderStatus.PENDING && now.isBefore(expiresAt(hold));
+  }
+
+  public boolean isExpired(LocalDateTime now, Duration hold){
+    return status == OrderStatus.PENDING && !now.isBefore(expiresAt(hold));
+  }
 }
