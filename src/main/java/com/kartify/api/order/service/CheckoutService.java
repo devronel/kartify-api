@@ -98,9 +98,9 @@ public class CheckoutService {
 
 
   // Retry Payment
-  public CheckoutResponse retryPayment(Long userId, Long orderId){
+  public CheckoutResponse retryPayment(Long userId, String orderNumber){
 
-    PaymentAttemptResponse attemp = paymentService.prepareRetry(userId, orderId);
+    PaymentAttemptResponse attemp = paymentService.prepareRetry(userId, orderNumber);
 
     try {
 

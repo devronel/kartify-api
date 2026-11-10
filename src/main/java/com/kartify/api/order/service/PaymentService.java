@@ -164,9 +164,9 @@ public class PaymentService {
 
   // Prepare retry payment
   @Transactional
-  public PaymentAttemptResponse prepareRetry(Long userId, Long orderId){
+  public PaymentAttemptResponse prepareRetry(Long userId, String orderNumber){
 
-    Order order = orderRepository.findByIdAndUseridForUpdate(orderId, userId)
+    Order order = orderRepository.findByOrderNumberAndUseridForUpdate(orderNumber, userId)
       .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
 
     Payment payment = paymentRepository.findFirstByOrderIdOrderByCreatedAtDesc(order.getId())

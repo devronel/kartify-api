@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import com.kartify.api.order.enums.OrderStatus;
+import com.kartify.api.order.enums.PaymentAction;
 
 public record OrderDetailsResponse(
   String orderNumber,
@@ -26,7 +27,7 @@ public record OrderDetailsResponse(
   String shippingPostalCode,
   String shippingCountry,
   String notes,
-  Boolean isPayable,
+  PaymentAction paymentAction,
   Boolean isExpired,
   LocalDateTime expiresAt,
   LocalDateTime createdAt,

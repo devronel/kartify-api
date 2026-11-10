@@ -39,6 +39,7 @@ import com.kartify.api.order.entity.Order;
 import com.kartify.api.order.entity.OrderItem;
 import com.kartify.api.order.entity.Payment;
 import com.kartify.api.order.enums.OrderStatus;
+import com.kartify.api.order.enums.PaymentAction;
 import com.kartify.api.order.repository.OrderItemRepository;
 import com.kartify.api.order.repository.OrderRepository;
 import com.kartify.api.order.repository.PaymentRepository;
@@ -253,19 +254,31 @@ public class OrderService {
         (first, second) -> first
       ));
 
+
+    LocalDateTime now = LocalDateTime.now();
+
+
     List<OrderResponse> orderResponse = orders.stream()
       .map(order -> {
 
-        boolean pending = order.getStatus() == OrderStatus.PENDING;
+        boolean isPayable = order.isPayable(now, PENDING_HOLD);
+        boolean isExpired = order.isExpired(now, PENDING_HOLD);
+        LocalDateTime expiresAt = order.getStatus() == OrderStatus.PENDING ? order.expiresAt(PENDING_HOLD) : null;
+        PaymentSummaryResponse payment = latestPayments.getOrDefault(order.getId(), null);
+        
+        PaymentAction paymentAction = !isPayable ? PaymentAction.NONE : payment.status().paymentAction();
 
         return new OrderResponse(
           order.getOrderNumber(),
           order.getStatus(),
-          latestPayments.getOrDefault(order.getId(), null).status(),
+          payment.status(),
+          payment.checkoutUrl(),
           order.getTotal(),
           itemCountByOrderId.getOrDefault(order.getId(), 0),
-          pending,
-          pending ? order.getCreatedAt().plus(PENDING_HOLD) : null,
+          paymentAction,
+          isExpired,
+          expiresAt,
+          order.getCreatedAt(),
           orderItemsMap.get(order.getId()).stream().limit(3).toList()
         );
 
@@ -330,6 +343,7 @@ public class OrderService {
     boolean isPayable = order.isPayable(now, PENDING_HOLD);
     boolean isExpired = order.isExpired(now, PENDING_HOLD);
     LocalDateTime expiresAt = order.getStatus() == OrderStatus.PENDING ? order.expiresAt(PENDING_HOLD) : null;
+    PaymentAction paymentAction = !isPayable ? PaymentAction.NONE : paymentSummaryResponse.status().paymentAction();
 
     return new OrderDetailsResponse(
       order.getOrderNumber(),
@@ -349,7 +363,7 @@ public class OrderService {
       order.getShippingPostalCode(),
       order.getShippingCountry(),
       order.getNotes(),
-      isPayable,
+      paymentAction,
       isExpired,
       expiresAt,
       order.getCreatedAt(),
