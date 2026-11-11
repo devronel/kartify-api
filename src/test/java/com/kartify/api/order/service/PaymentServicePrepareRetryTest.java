@@ -3,11 +3,9 @@ package com.kartify.api.order.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.Optional;
-import java.util.UUID;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -35,11 +33,12 @@ public class PaymentServicePrepareRetryTest {
   @InjectMocks
   private PaymentService paymentService;
 
+  private final String orderNumber = "ORD_3434";
+
   @Test
   void prepareRetry_ShouldReturnPaymentAttemptResponse_IfTheStatusIsSetupFailed(){
 
     Long userId = 1L;
-    Long orderId = 1L;
 
     Order order = new Order();
 
@@ -55,7 +54,7 @@ public class PaymentServicePrepareRetryTest {
     newPayment.setStatus(PaymentStatus.CREATING);
     newPayment.setIdempotencyKey(newIdempotencyKey);
 
-    when(orderRepository.findByIdAndUseridForUpdate(userId, orderId))
+    when(orderRepository.findByOrderNumberAndUseridForUpdate(orderNumber, userId))
       .thenReturn(Optional.of(order));
 
     when(paymentRepository.findFirstByOrderIdOrderByCreatedAtDesc(order.getId()))
@@ -64,7 +63,7 @@ public class PaymentServicePrepareRetryTest {
     when(paymentRepository.save(any(Payment.class)))
       .thenReturn(newPayment);
 
-    PaymentAttemptResponse response = paymentService.prepareRetry(userId, orderId);
+    PaymentAttemptResponse response = paymentService.prepareRetry(userId, orderNumber);
 
     assertNotNull(response);
     assertEquals(order.getId(), response.orderId());
@@ -79,7 +78,6 @@ public class PaymentServicePrepareRetryTest {
   void prepareRetry_ShouldReturnPaymentAttemptResponse_IfTheStatusIsCreationUnknown(){
 
     Long userId = 1L;
-    Long orderId = 1L;
 
     Order order = new Order();
 
@@ -89,13 +87,13 @@ public class PaymentServicePrepareRetryTest {
     payment.setStatus(PaymentStatus.CREATION_UNKNOWN);
     payment.setIdempotencyKey(oldIdempotencyKey);
 
-    when(orderRepository.findByIdAndUseridForUpdate(userId, orderId))
+    when(orderRepository.findByOrderNumberAndUseridForUpdate(orderNumber, userId))
       .thenReturn(Optional.of(order));
 
     when(paymentRepository.findFirstByOrderIdOrderByCreatedAtDesc(order.getId()))
       .thenReturn(Optional.of(payment));
 
-    PaymentAttemptResponse response = paymentService.prepareRetry(userId, orderId);
+    PaymentAttemptResponse response = paymentService.prepareRetry(userId, orderNumber);
 
     assertNotNull(response);
     assertEquals(order.getId(), response.orderId());
@@ -110,7 +108,6 @@ public class PaymentServicePrepareRetryTest {
   void prepareRetry_ShouldThrowException_IfPaymentStatusIsSucceeded(){
 
     Long userId = 1L;
-    Long orderId = 1L;
 
     Order order = new Order();
 
@@ -118,14 +115,14 @@ public class PaymentServicePrepareRetryTest {
     payment.setOrder(order);
     payment.setStatus(PaymentStatus.SUCCEEDED);
 
-    when(orderRepository.findByIdAndUseridForUpdate(userId, orderId))
+    when(orderRepository.findByOrderNumberAndUseridForUpdate(orderNumber, userId))
       .thenReturn(Optional.of(order));
 
     when(paymentRepository.findFirstByOrderIdOrderByCreatedAtDesc(order.getId()))
       .thenReturn(Optional.of(payment));
 
     Assertions.assertThrows(IllegalStateException.class, () -> {
-      paymentService.prepareRetry(userId, orderId);
+      paymentService.prepareRetry(userId, orderNumber);
     });
 
 
@@ -136,7 +133,6 @@ public class PaymentServicePrepareRetryTest {
   void prepareRetry_ShouldThrowException_IfPaymentStatusIsCreating(){
 
     Long userId = 1L;
-    Long orderId = 1L;
 
     Order order = new Order();
 
@@ -144,14 +140,14 @@ public class PaymentServicePrepareRetryTest {
     payment.setOrder(order);
     payment.setStatus(PaymentStatus.CREATING);
 
-    when(orderRepository.findByIdAndUseridForUpdate(userId, orderId))
+    when(orderRepository.findByOrderNumberAndUserId(orderNumber, userId))
       .thenReturn(Optional.of(order));
 
     when(paymentRepository.findFirstByOrderIdOrderByCreatedAtDesc(order.getId()))
       .thenReturn(Optional.of(payment));
 
     Assertions.assertThrows(IllegalStateException.class, () -> {
-      paymentService.prepareRetry(userId, orderId);
+      paymentService.prepareRetry(userId, orderNumber);
     });
 
   }

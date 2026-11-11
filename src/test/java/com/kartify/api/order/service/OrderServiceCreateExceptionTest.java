@@ -24,7 +24,6 @@ import com.kartify.api.exception.ResourceNotFoundException;
 import com.kartify.api.order.dto.OrderCreateRequest;
 import com.kartify.api.order.entity.Order;
 import com.kartify.api.order.enums.OrderStatus;
-import com.kartify.api.order.enums.PaymentMethod;
 import com.kartify.api.product.entity.Product;
 import com.kartify.api.product.entity.ProductVariant;
 import com.kartify.api.user.entity.User;

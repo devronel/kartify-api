@@ -9,7 +9,6 @@ import org.springframework.stereotype.Service;
 
 import com.kartify.api.cart.entity.Cart;
 import com.kartify.api.cart.entity.CartItem;
-import com.kartify.api.cart.repository.CartItemRepository;
 import com.kartify.api.cart.repository.CartRepository;
 import com.kartify.api.contract.FileStorage;
 import com.kartify.api.exception.PaymentCreationRejectedException;
@@ -38,7 +37,6 @@ public class CheckoutService {
   private final PaymentService paymentService;
   private final UserAddressRepository userAddressRepository;
   private final CartRepository cartRepository;
-  private final CartItemRepository cartItemRepository;
   private final FileStorage fileStorage;
 
 
@@ -47,14 +45,12 @@ public class CheckoutService {
     PaymentService paymentService,
     UserAddressRepository userAddressRepository,
     CartRepository cartRepository,
-    CartItemRepository cartItemRepository,
     FileStorage fileStorage
   ){
     this.paymongoService = paymongoService;
     this.paymentService = paymentService;
     this.userAddressRepository = userAddressRepository;
     this.cartRepository = cartRepository;
-    this.cartItemRepository = cartItemRepository;
     this.fileStorage = fileStorage;
   }
 
@@ -82,7 +78,7 @@ public class CheckoutService {
       );
   
       return new CheckoutResponse(
-        paymentProvider.paymentLinkId(), 
+        order.orderNumber(), 
         paymentProvider.checkoutUrl()
       );
       
@@ -119,7 +115,7 @@ public class CheckoutService {
       );
 
       return new CheckoutResponse(
-        paymentProvider.paymentLinkId(),
+        attemp.orderNumber(),
         paymentProvider.checkoutUrl()
       );
 
