@@ -3,6 +3,7 @@ package com.kartify.api.category.controller;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -31,6 +32,7 @@ public class CategoryController {
     }
 
     // --- Create Category endpoint ---
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<ApiResponse<CategoryResponse>> create(@Valid @RequestBody CategoryCreateRequest request){
         CategoryResponse createdCategory = categoryService.create(request);
@@ -38,6 +40,7 @@ public class CategoryController {
     }
 
     // --- Update Category endpoint ---
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<CategoryResponse>> update(
         @PathVariable Long id,

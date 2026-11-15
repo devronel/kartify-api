@@ -140,7 +140,7 @@ public class PaymentServicePrepareRetryTest {
     payment.setOrder(order);
     payment.setStatus(PaymentStatus.CREATING);
 
-    when(orderRepository.findByOrderNumberAndUserId(orderNumber, userId))
+    when(orderRepository.findByOrderNumberAndUseridForUpdate(orderNumber, userId))
       .thenReturn(Optional.of(order));
 
     when(paymentRepository.findFirstByOrderIdOrderByCreatedAtDesc(order.getId()))

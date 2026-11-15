@@ -1,6 +1,7 @@
 package com.kartify.api.order.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -19,13 +20,12 @@ import com.kartify.api.exception.PaymentCreationRejectedException;
 import com.kartify.api.exception.PaymentCreationUnknownException;
 import com.kartify.api.order.dto.CheckoutResponse;
 import com.kartify.api.order.dto.OrderCreateRequest;
-import com.kartify.api.order.dto.OrderCreateResponse;
 import com.kartify.api.order.dto.OrderPaymentResponse;
 import com.kartify.api.order.entity.Payment;
 import com.kartify.api.order.enums.PaymentStatus;
+import com.kartify.api.payment.contracts.PaymentProvider;
 import com.kartify.api.payment.dto.PaymentLink;
 import com.kartify.api.payment.dto.PaymentLinkRequest;
-import com.kartify.api.payment.service.PaymongoService;
 
 @ExtendWith(MockitoExtension.class)
 public class CheckoutServiceTest {
@@ -34,7 +34,7 @@ public class CheckoutServiceTest {
   private OrderService orderService;
 
   @Mock
-  private PaymongoService paymongoService;
+  private PaymentProvider paymentProvider;
 
   @Mock
   private PaymentService paymentService;
@@ -42,31 +42,27 @@ public class CheckoutServiceTest {
   @InjectMocks
   private CheckoutService checkoutService;
 
+  private final String idempotencyKey = "idm_key_UIUIKJKLH";
+
   @Test
   void placeOrder_ShouldSuccess_WhenAllServicesSucceed() {
 
+    // Arrange
     Long userId = 1L;
     OrderCreateRequest payload = mock(OrderCreateRequest.class);
 
     Long orderId = 10L;
+    Long paymentId = 20L;
+
     String orderNumber = "ORD-2026-UIUHJHKHK";
+
     BigDecimal totalAmount = new BigDecimal("1500.00");
-    String idempotencyKey = "idm_key_UIUIKJKLH";
 
-    Payment payment = new Payment();
-    payment.setStatus(PaymentStatus.CREATING);
-
-    OrderCreateResponse order = new OrderCreateResponse(
+    OrderPaymentResponse order = new OrderPaymentResponse(
       orderId,
+      paymentId,
       orderNumber,
-      totalAmount
-    );
-
-    OrderPaymentResponse orderPaymentResponse = new OrderPaymentResponse(
-      order.orderId(),
-      payment.getId(),
-      order.orderNumber(),
-      order.totalAmount(),
+      totalAmount,
       idempotencyKey
     );
 
@@ -76,30 +72,30 @@ public class CheckoutServiceTest {
       "payment-payload"
     );
 
-    when(orderService.create(userId, payload))
+    when(paymentService.createOrderAndPayment(userId, payload))
       .thenReturn(order);
 
-    when(paymentService.create(order.orderId()))
-      .thenReturn(payment);
-
-    when(paymongoService.process(any(PaymentLinkRequest.class)))
+    when(paymentProvider.process(any(PaymentLinkRequest.class)))
       .thenReturn(paymentLink);
 
     // Act
     CheckoutResponse response = checkoutService.placeOrder(userId, payload);
 
     // Assert
-    assertEquals("pay_123", response.orderNumber());
+    assertNotNull(response);
+    assertEquals(orderNumber, response.orderNumber());
     assertEquals("https://checkout.example.com/pay_123", response.checkoutUrl());
-    verify(orderService).create(userId, payload);
-    verify(paymentService).create(order.orderId());
-    verify(paymongoService).process(any(PaymentLinkRequest.class));
+
+    verify(paymentService).createOrderAndPayment(userId, payload);
+
+    verify(paymentProvider).process(any(PaymentLinkRequest.class));
+
     verify(paymentService).update(
-        orderPaymentResponse.paymentId(),
-        orderPaymentResponse.orderId(),
-        paymentLink.paymentLinkId(),
-        paymentLink.checkoutUrl(),
-        paymentLink.payload()
+      paymentId,
+      orderId,
+      paymentLink.paymentLinkId(),
+      paymentLink.checkoutUrl(),
+      paymentLink.payload()
     );
   }
 
@@ -119,19 +115,18 @@ public class CheckoutServiceTest {
     Payment updatedPayment = new Payment();
     updatedPayment.setStatus(PaymentStatus.SETUP_FAILED);
 
-    OrderCreateResponse order = new OrderCreateResponse(
+    OrderPaymentResponse order = new OrderPaymentResponse(
       orderId,
+      payment.getId(),
       orderNumber,
-      totalAmount
+      totalAmount,
+      idempotencyKey
     );
 
-    when(orderService.create(userId, payload))
+    when(paymentService.createOrderAndPayment(userId, payload))
       .thenReturn(order);
 
-    when(paymentService.create(order.orderId()))
-      .thenReturn(payment);
-
-    when(paymongoService.process(any(PaymentLinkRequest.class)))
+    when(paymentProvider.process(any(PaymentLinkRequest.class)))
       .thenThrow(PaymentCreationRejectedException.class);
 
     // Act
@@ -159,19 +154,18 @@ public class CheckoutServiceTest {
     Payment updatedPayment = new Payment();
     updatedPayment.setStatus(PaymentStatus.SETUP_FAILED);
 
-    OrderCreateResponse order = new OrderCreateResponse(
+    OrderPaymentResponse order = new OrderPaymentResponse(
       orderId,
+      payment.getId(),
       orderNumber,
-      totalAmount
+      totalAmount,
+      idempotencyKey
     );
 
-    when(orderService.create(userId, payload))
+    when(paymentService.createOrderAndPayment(userId, payload))
       .thenReturn(order);
 
-    when(paymentService.create(order.orderId()))
-      .thenReturn(payment);
-
-    when(paymongoService.process(any(PaymentLinkRequest.class)))
+    when(paymentProvider.process(any(PaymentLinkRequest.class)))
       .thenThrow(PaymentCreationUnknownException.class);
 
     // Act

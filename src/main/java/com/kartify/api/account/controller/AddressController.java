@@ -3,6 +3,7 @@ package com.kartify.api.account.controller;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -33,11 +34,13 @@ public class AddressController {
         this.addressService = addressService;
     }
 
+
     @GetMapping
     public ResponseEntity<ApiResponse<List<AddressResponse>>> getAddresses(@AuthenticationPrincipal CustomUserDetails principal){
         List<AddressResponse> userAddresses = addressService.getAddresses(principal.getId());
         return ResponseEntity.ok(ApiResponse.success("Address List", userAddresses));
     }
+
 
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<AddressResponse>> getAddress(
@@ -49,6 +52,8 @@ public class AddressController {
         return ResponseEntity.ok(ApiResponse.success("Edit Address Information", userAddress));
     }
 
+
+    @PreAuthorize("@accountAuthorization.isEmailVerified(principal)")
     @PostMapping
     public ResponseEntity<ApiResponse<AddressResponse>> createAddress(
         @AuthenticationPrincipal CustomUserDetails principal, 
@@ -58,6 +63,8 @@ public class AddressController {
         return ResponseEntity.ok(ApiResponse.success("Address Created Successfully", response));
     }
 
+
+    @PreAuthorize("@accountAuthorization.isEmailVerified(principal)")
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<AddressResponse>> updateAddress(
         @AuthenticationPrincipal CustomUserDetails principal, 
@@ -68,6 +75,8 @@ public class AddressController {
         return ResponseEntity.ok(ApiResponse.success("Address Update Successfully", response));
     }
 
+
+    @PreAuthorize("@accountAuthorization.isEmailVerified(principal)")
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<String>> deleteAddress(
         @AuthenticationPrincipal CustomUserDetails principal, 
@@ -77,6 +86,8 @@ public class AddressController {
         return ResponseEntity.ok(ApiResponse.success("Address Deleted", response));
     }
 
+
+    @PreAuthorize("@accountAuthorization.isEmailVerified(principal)")
     @PatchMapping("/{id}/default")
     public ResponseEntity<ApiResponse<AddressResponse>> setDefaultAddress(
         @AuthenticationPrincipal CustomUserDetails principal, 

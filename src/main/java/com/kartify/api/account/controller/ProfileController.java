@@ -1,6 +1,7 @@
 package com.kartify.api.account.controller;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -38,6 +39,8 @@ public class ProfileController {
         return ResponseEntity.ok(ApiResponse.success("Profile Information", userProfile));
     }
 
+
+    @PreAuthorize("@accountAuthorization.isEmailVerified(principal)")
     @PostMapping
     public ResponseEntity<ApiResponse<ProfileResponse>> updateProfile(
         @AuthenticationPrincipal CustomUserDetails principal, 
@@ -47,6 +50,8 @@ public class ProfileController {
         return ResponseEntity.ok(ApiResponse.success("Profile Updated Successfully", userProfile));
     }
 
+    
+    @PreAuthorize("@accountAuthorization.isEmailVerified(principal)")
     @PostMapping("/upload")
     public ResponseEntity<ApiResponse<ProfilePictureResponse>> uploadProfilePicture(
         @AuthenticationPrincipal CustomUserDetails principal, 

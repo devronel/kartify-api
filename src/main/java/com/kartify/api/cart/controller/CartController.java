@@ -4,6 +4,7 @@ import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -46,6 +47,7 @@ public class CartController {
 
 
   // Add new item in the cart
+  @PreAuthorize("@accountAuthorization.isEmailVerified(principal)")
   @PostMapping
   public ResponseEntity<CartItemResponse> addItem(@AuthenticationPrincipal CustomUserDetails principal, @Valid @RequestBody CartItemCreateRequest request) {
 
@@ -57,6 +59,7 @@ public class CartController {
 
 
   // Get all cart items
+  @PreAuthorize("@accountAuthorization.isEmailVerified(principal)")
   @GetMapping
   public ResponseEntity<CartResponse> getAllItem(
     @AuthenticationPrincipal CustomUserDetails principal
@@ -70,6 +73,7 @@ public class CartController {
 
 
   // Remove item from the cart
+  @PreAuthorize("@accountAuthorization.isEmailVerified(principal)")
   @DeleteMapping("/items/{id}")
   public ResponseEntity<Void> removeItem(
     @AuthenticationPrincipal CustomUserDetails principal,
@@ -84,6 +88,7 @@ public class CartController {
 
 
   // Update item quantity
+  @PreAuthorize("@accountAuthorization.isEmailVerified(principal)")
   @PatchMapping("/items/{id}")
   public ResponseEntity<ItemQuantityUpdateResponse> updateQuantity(
     @AuthenticationPrincipal CustomUserDetails principal,
@@ -100,6 +105,8 @@ public class CartController {
   }
 
 
+  // Get total cart quantity
+  @PreAuthorize("@accountAuthorization.isEmailVerified(principal)")
   @GetMapping("/items/count")
   public ResponseEntity<Integer> getTotalCartQuantity(@AuthenticationPrincipal CustomUserDetails principal) {
 

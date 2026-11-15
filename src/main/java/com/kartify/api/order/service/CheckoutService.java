@@ -22,9 +22,9 @@ import com.kartify.api.order.dto.OrderCreateRequest;
 import com.kartify.api.order.dto.OrderPaymentResponse;
 import com.kartify.api.order.dto.PaymentAttemptResponse;
 import com.kartify.api.order.enums.PaymentStatus;
+import com.kartify.api.payment.contracts.PaymentProvider;
 import com.kartify.api.payment.dto.PaymentLink;
 import com.kartify.api.payment.dto.PaymentLinkRequest;
-import com.kartify.api.payment.service.PaymongoService;
 import com.kartify.api.user.entity.UserAddress;
 import com.kartify.api.user.repository.UserAddressRepository;
 
@@ -33,7 +33,8 @@ public class CheckoutService {
 
   private static final Logger log = LoggerFactory.getLogger(CheckoutService.class);
   
-  private final PaymongoService paymongoService;
+  // private final PaymongoService paymongoService;
+  private final PaymentProvider paymentProvider;
   private final PaymentService paymentService;
   private final UserAddressRepository userAddressRepository;
   private final CartRepository cartRepository;
@@ -41,13 +42,13 @@ public class CheckoutService {
 
 
   public CheckoutService(
-    PaymongoService paymongoService,
+    PaymentProvider paymentProvider,
     PaymentService paymentService,
     UserAddressRepository userAddressRepository,
     CartRepository cartRepository,
     FileStorage fileStorage
   ){
-    this.paymongoService = paymongoService;
+    this.paymentProvider = paymentProvider;
     this.paymentService = paymentService;
     this.userAddressRepository = userAddressRepository;
     this.cartRepository = cartRepository;
@@ -62,7 +63,7 @@ public class CheckoutService {
 
     try {
 
-      PaymentLink paymentProvider = paymongoService.process(new PaymentLinkRequest(
+      PaymentLink paymentProv = paymentProvider.process(new PaymentLinkRequest(
         order.idempotencyKey(),
         order.totalAmount(),
         "Payment for Order " + order.orderNumber(),
@@ -72,14 +73,14 @@ public class CheckoutService {
       paymentService.update(
         order.paymentId(), 
         order.orderId(), 
-        paymentProvider.paymentLinkId(), 
-        paymentProvider.checkoutUrl(), 
-        paymentProvider.payload()
+        paymentProv.paymentLinkId(), 
+        paymentProv.checkoutUrl(), 
+        paymentProv.payload()
       );
   
       return new CheckoutResponse(
         order.orderNumber(), 
-        paymentProvider.checkoutUrl()
+        paymentProv.checkoutUrl()
       );
       
     } catch (PaymentCreationRejectedException e) {
@@ -100,7 +101,7 @@ public class CheckoutService {
 
     try {
 
-      PaymentLink paymentProvider = paymongoService.process(new PaymentLinkRequest(
+      PaymentLink paymentProv = paymentProvider.process(new PaymentLinkRequest(
         attemp.idempotencyKey(),
         attemp.totalAmount(),
         "Payment for Order " + attemp.orderNumber(),
@@ -109,14 +110,14 @@ public class CheckoutService {
 
       paymentService.completePaymentSetup(
         attemp.paymentId(), 
-        paymentProvider.paymentLinkId(), 
-        paymentProvider.checkoutUrl(), 
-        paymentProvider.payload()
+        paymentProv.paymentLinkId(), 
+        paymentProv.checkoutUrl(), 
+        paymentProv.payload()
       );
 
       return new CheckoutResponse(
         attemp.orderNumber(),
-        paymentProvider.checkoutUrl()
+        paymentProv.checkoutUrl()
       );
 
     } catch (PaymentCreationRejectedException e) {

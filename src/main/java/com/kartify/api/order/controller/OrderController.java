@@ -4,6 +4,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -32,6 +33,7 @@ public class OrderController {
   }
 
   // Get all the order by user
+  @PreAuthorize("@accountAuthorization.isEmailVerified(principal)")
   @GetMapping
   public ResponseEntity<PaginationResponse<OrderResponse>> getAll(
     @AuthenticationPrincipal CustomUserDetails principal,
@@ -54,6 +56,7 @@ public class OrderController {
 
 
   // Get order by id
+  @PreAuthorize("@accountAuthorization.isEmailVerified(principal)")
   @GetMapping("/{orderNumber}")
   public ResponseEntity<OrderDetailsResponse> getDetail(
     @AuthenticationPrincipal CustomUserDetails principal,

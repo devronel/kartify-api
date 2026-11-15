@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import com.kartify.api.exception.PaymentCreationRejectedException;
 import com.kartify.api.exception.PaymentCreationUnknownException;
+import com.kartify.api.payment.contracts.PaymentProvider;
 import com.kartify.api.payment.dto.PaymentLink;
 import com.kartify.api.payment.dto.PaymentLinkRequest;
 
@@ -21,7 +22,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 @Service
-public class PaymongoService {
+public class PaymongoService implements PaymentProvider {
 
   private final String secretKey;
   private final ObjectMapper objectMapper;

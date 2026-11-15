@@ -2,6 +2,7 @@ package com.kartify.api.order.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -28,6 +29,7 @@ public class CheckoutController {
 
 
   // Create order
+  @PreAuthorize("@accountAuthorization.isEmailVerified(principal)")
   @PostMapping
   public ResponseEntity<CheckoutResponse> create(
     @AuthenticationPrincipal CustomUserDetails principal,
@@ -41,6 +43,7 @@ public class CheckoutController {
   }
 
 
+  @PreAuthorize("@accountAuthorization.isEmailVerified(principal)")
   @PostMapping("/retry/{orderNumber}")
   public ResponseEntity<CheckoutResponse> retryPayment(
     @AuthenticationPrincipal CustomUserDetails principal,
@@ -56,6 +59,7 @@ public class CheckoutController {
 
 
   // Get checkout details
+  @PreAuthorize("@accountAuthorization.isEmailVerified(principal)")
   @GetMapping
   public ResponseEntity<CheckoutDetailsResponse> getDetail(@AuthenticationPrincipal CustomUserDetails principal){
 
