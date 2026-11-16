@@ -1,10 +1,12 @@
 package com.kartify.api.config;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -39,6 +41,15 @@ import tools.jackson.databind.ObjectMapper;
 @EnableMethodSecurity
 public class SecurityConfig {
 
+    private final List<String> origins;
+
+    public SecurityConfig(
+        @Value("${app.url-storefront}") String urlStorefrontSite,
+        @Value("${app.url-admin}") String urlAdminSite
+    ){
+        this.origins = List.of(urlStorefrontSite, urlAdminSite);
+    }
+
     // --- Password hashing — Spring's equivalent of Laravel's bcrypt() default ---
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -55,7 +66,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:3000"));
+        config.setAllowedOrigins(this.origins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true); // critical — allows the session cookie to be sent cross-origin

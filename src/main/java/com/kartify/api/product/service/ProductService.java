@@ -2,6 +2,7 @@ package com.kartify.api.product.service;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -28,6 +29,7 @@ import com.kartify.api.contract.FileStorage;
 import com.kartify.api.exception.FieldValidationException;
 import com.kartify.api.exception.ResourceNotFoundException;
 import com.kartify.api.product.dto.CategoryFilterResponse;
+import com.kartify.api.product.dto.FeaturedCategoryResponse;
 import com.kartify.api.product.dto.ProductAdminListResponse;
 import com.kartify.api.product.dto.ProductAttributeValueResponse;
 import com.kartify.api.product.dto.ProductAttributeWithValueResponse;
@@ -90,7 +92,17 @@ public class ProductService {
         this.fileStorage = fileStorage;
     }
 
-    // --- Get all Product with Pagination ---
+    
+    /**
+     * Retrieves a paginated list of products for the admin site.
+     *
+     * Includes product details, primary images, and total stock quantities.
+     * Supports keyword-based searching.
+     *
+     * @param search the keyword used to filter products
+     * @param pageable pagination and sorting information
+     * @return paginated product information for the admin product list
+     */
     public PaginationResponse<ProductAdminListResponse> getAll(String search, Pageable pageable){
 
         Specification<Product> spec = null;
@@ -99,19 +111,12 @@ public class ProductService {
             spec = ProductSpecifications.keyword(search);
         }
 
-        // Get all the paginated products
         Page<Product> productPage = productRepository.findAll(spec, pageable);
         
-
-        // Get paginated product content
         List<Product> products = productPage.getContent();
 
-
-        // Get product ids
         List<Long> productIds = products.stream().map(product -> product.getId()).toList();
 
-
-        // Get the files by product ids
         List<ProductFileListResponse> primaryImages = productFileRepository.findPrimaryImagesByProductIds(productIds)
             .stream().map(file -> new ProductFileListResponse(
                 file.getId(),
@@ -125,7 +130,7 @@ public class ProductService {
             )).toList();
 
 
-        // Group Product Image by product id
+        // Group primary images by product ID.
         Map<Long, ProductFileListResponse> primaryImageByProduct = primaryImages.stream()
             .collect(Collectors.toMap(
                 file -> file.productId(),
@@ -133,7 +138,7 @@ public class ProductService {
             ));
 
 
-        // Create map for sum of variant by product for stock quantity total
+        // Map total variant stock quantities by product ID.
         Map<Long, Integer> variantStockByProduct = productVariantRepository
             .sumStockByProductIds(productIds)
             .stream()
@@ -184,35 +189,39 @@ public class ProductService {
     }
 
 
-    // --- Get product by id including its files and variants ---
+    /**
+     * Retrieves a product by its ID for the admin product editing page.
+     *
+     * Includes product details, associated files, variants, and their
+     * corresponding attribute values.
+     *
+     * @param id the ID of the product to retrieve
+     * @return the product edit response containing all required product information
+     * @throws ResourceNotFoundException if the product does not exist
+    */
     public ProductEditResponse getById(Long id){
         
-        // 1. Find the products
         Product product = productRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
 
-        // 2. Find the product images
+
         List<ProductEditFileResponse> files = product.getFiles().stream()
             .map(file -> {
-
                 String imageUrl = fileStorage.getUrl("files/public/product/images/" + file.getFilename());
-                
                 ProductEditFileResponse productEditFileResponse = new ProductEditFileResponse(
                     file.getId(),
                     imageUrl,
                     file.getIsPrimary()  
                 );
-                
                 return productEditFileResponse;
-                
             }).toList();
 
-        // 3. Find Product Variants
+
+        // Retrieve product variants with their associated attribute values.
         List<ProductVariant> productVariants = productVariantRepository.findByProductIdWithAttributeValues(id);
 
         List<ProductEditVariantResponse> variants = productVariants.stream()
             .map(variant -> {
-
                 List<Long> attributeValueIds = variant.getAttributeValues().stream()
                     .map(attributeValue -> attributeValue.getId())
                     .toList();
@@ -231,12 +240,11 @@ public class ProductService {
             })
             .toList();
 
-        // Get product variant attribute and attribute values
+
+        // Group variant attribute values by product attribute.
         List<ProductAttributeWithValueResponse> variantAttributes = productVariants.stream()
             .flatMap(variant -> {
-
                 return variant.getAttributeValues().stream();
-
             })
             .collect(Collectors.groupingBy(
                 attributeValue -> attributeValue.getProductAttribute().getId(),
@@ -245,7 +253,6 @@ public class ProductService {
             ))
             .entrySet().stream()
             .map(entry -> {
-
                 List<ProductAttributeValueResponse> values = entry.getValue().stream()
                     .map(attributeValue -> new ProductAttributeValueResponse(
                         attributeValue.getId(),
@@ -288,14 +295,24 @@ public class ProductService {
     }
 
 
-    // --- Create Product ---
+    /**
+     * Create new product
+     * 
+     * Includes product details, associated files, variants and its corresponding
+     * attribute values
+     * 
+     * @param payload containing all the required product information
+     * @return product response containing some of the newly added created product
+     * @throws ResourceNotFoundException if no category found
+     * @throws FieldValidationException if product sku already exists
+     */
     @Transactional
     public ProductResponse create(ProductCreateRequest payload){
         
         Category category = categoryRepository.findById(payload.categoryId())
             .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
 
-        // --- Check for duplicate SKU, only if one was provided ---
+        // Check for duplicate SKU, only if one was provided
         if (productRepository.existsBySku(payload.sku())) {
             throw new FieldValidationException("sku", "SKU is already exists.");
         }
@@ -336,7 +353,7 @@ public class ProductService {
         product.setIsActive(false);
         product.setIsFeatured(false);
 
-        // --- Upload product files ---
+
         if(payload.files() != null && !payload.files().isEmpty()){
 
             List<ProductFileResponse> files = uploadFiles(payload.files());
@@ -358,7 +375,7 @@ public class ProductService {
             }
         }
 
-        // --- Save product variant ---
+
         if(Boolean.TRUE.equals(payload.hasVariant()) && payload.variants() != null && !payload.variants().isEmpty()){
             int index = 0;
             for (ProductVariantRequest productVariant : payload.variants()) {
@@ -374,22 +391,33 @@ public class ProductService {
     }
 
 
-    // --- Update Product including files and variants ---
     /*
         TODO: When hasVariants changes in either direction, delete that product’s cart items.
+    */
+   /**
+    * Save updated products
+    * 
+    * Includes product details, associated files, variants and its corresponding
+    * attribute values
+    * 
+    * @param id
+    * @param payload contains all the update product details
+    * @return true if the update is success 
+    * @throws ResourceNotFoundException if product doesn't exists
+    * @throws ResourceNotFoundException if category doesn't exists
+    * @throws IllegalArgumentException if product primary images is more than one
+    * @throws ResourceNotFoundException if theres file id in the request but not exist's in the db
+    * @throws ResourceNotFoundException if theres variant id in the request but not exist's in the db
     */
     @Transactional
     public boolean update(Long id, ProductUpdateRequest payload){
 
-        // 1. Get the product
         Product product = productRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("No product found"));
 
-        // 2. Get category
         Category category = categoryRepository.findById(payload.categoryId())
             .orElseThrow(() -> new ResourceNotFoundException("No category found"));
 
-        // 4. Populate the product details
         product.setCategory(category);
         product.setName(payload.name());
         product.setSlug(payload.slug());
@@ -415,35 +443,27 @@ public class ProductService {
         product.setWeight(payload.weight());
 
 
-        // ------------- START MANAGE IMAGES -------------
-
+        // START MANAGE IMAGES
         if(payload.files() == null) {
-
             product.getFiles().clear();
-            
         } else {
 
-            // 1. Get existing image IDs
             Set<Long> existingProductFileIds = product.getFiles().stream()
                 .map(file -> file.getId())
                 .collect(Collectors.toSet());
     
-            // 2. Get existing image IDs from the request
             Set<Long> incomingProductFileIds = payload.files().stream()
                 .map(file -> file.id())
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
     
-            // 3. Find images that were removed
+            // Find images that were removed
             Set<Long> removeIds = new HashSet<>(existingProductFileIds);
             removeIds.removeAll(incomingProductFileIds);
     
-            // 4. Delete the images
-            product.getFiles().removeIf(
-                file -> removeIds.contains(file.getId())
-            );
+            product.getFiles().removeIf(file -> removeIds.contains(file.getId()));
     
-            // 5. If there are images, validate/update/add them
+            // If there are images, validate, update existing and add if theres new image found
             if (!payload.files().isEmpty()) {
     
                 long primaryCount = payload.files().stream()
@@ -484,41 +504,27 @@ public class ProductService {
             }
         }
 
-        // ------------- END MANAGE IMAGES -------------
 
-
-        // ------------- START MANAGE VARIANTS -------------
-
+        // START MANAGE VARIANTS
         if(Boolean.FALSE.equals(payload.hasVariant())){
-            
-            // Clear the variants
             product.getVariants().clear();
-
         }else{
 
-            // 1. Get the ids of existing variants
             Set<Long> existingVariantIds = product.getVariants().stream()
                 .map(variant -> variant.getId())
                 .collect(Collectors.toSet());
     
-            // 2. Get the ids variants in upcoming request data
             Set<Long> upcomingVariantIds = payload.variants().stream()
                 .map(variant -> variant.id())
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
     
-            // 3. Get variants ids to be remove
+            // Get variants ids to be remove
             Set<Long> removeVariantIds = new HashSet<>(existingVariantIds);
             removeVariantIds.removeAll(upcomingVariantIds);
     
-            // 4. Remove the variants by ids
-            product.getVariants().removeIf(
-                variant -> removeVariantIds.contains(variant.getId())
-            );
-    
+            product.getVariants().removeIf(variant -> removeVariantIds.contains(variant.getId()));
             
-
-            // --- START CREATE MAP<Long, ProductAttributeValue> FOR ATTRIBUTE VALUES ---
             Set<Long> attributeValueIds = payload.variants().stream()
                 .flatMap(variant -> variant.attributeValueIds().stream())
                 .collect(Collectors.toSet());
@@ -526,34 +532,23 @@ public class ProductService {
             List<ProductAttributeValue> productAttributeValues = productAttributeValueRepository.findAllById(attributeValueIds);
 
             Map<Long, ProductAttributeValue> productAttributeValueMap = productAttributeValues.stream()
-                    .collect(Collectors.toMap(value -> value.getId(), Function.identity()));
-            // --- END CREATE MAP FOR ATTRIBUTE VALUES ---
+                .collect(Collectors.toMap(value -> value.getId(), Function.identity()));
 
-
-
-            // 5. Process incoming variants
+            // Process incoming variants
             for (ProductUpdateVariantRequest payloadVariant : payload.variants()) {
     
                 ProductVariant productVariant;
     
                 if (payloadVariant.id() != null) {
-    
-                    // Update existing variant
                     productVariant = product.getVariants().stream()
                         .filter(variant -> variant.getId().equals(payloadVariant.id()))
                         .findFirst()
                         .orElseThrow(() -> new ResourceNotFoundException("Product variant not found"));
-    
                 } else {
-    
-                    // Create new variant
                     productVariant = new ProductVariant();
-    
                     product.addVariant(productVariant);
-                    
                 }
     
-                // 6. Update attribute values
                 productVariant.getAttributeValues().clear();
     
                 for (Long attributeValueId : payloadVariant.attributeValueIds()) {
@@ -567,7 +562,6 @@ public class ProductService {
                     productVariant.addVariantAttributeValue(attributeValue);
                 }
     
-                // 7. Update variant properties
                 productVariant.setSku(!payloadVariant.sku().isBlank() ? payloadVariant.sku().toUpperCase() : null);
                 productVariant.setPrice(payloadVariant.price());
 
@@ -588,13 +582,20 @@ public class ProductService {
 
         }
 
-        // ------------- END MANAGE VARIANTS -------------
-
         return true;
     }
 
 
-    // --- Switch product status ---
+    /**
+    * Update product `active` properties
+    * 
+    * Switch the product from active to inactive and vice-versa
+    * 
+    * @param id
+    * @param active contains boolean value
+    * @return void
+    * @throws ResourceNotFoundException if product doesn't exists
+    */
     public void updateActive(Long id, boolean active) {
 
         Product product = productRepository.findById(id)
@@ -607,7 +608,13 @@ public class ProductService {
     }
 
 
-    // --- Delete product ---
+    /**
+     * Delete product
+     * 
+     * @param id
+     * @return void
+     * @throws ResourceNotFoundException if product doesn't exists
+     */
     public void delete(Long id) {
 
         Product product = productRepository.findById(id)
@@ -618,10 +625,22 @@ public class ProductService {
     }
 
 
-    // --- Create product variant ---
+    /**
+     * Creates a product variant and associates it with the specified product.
+     *
+     * Validates SKU uniqueness, assigns pricing and stock information,
+     * and associates the selected attribute values.
+     *
+     * @param product the product associated with the variant
+     * @param payload the variant creation details
+     * @param index the variant index used to identify validation errors
+     * @return the newly created product variant
+     * @throws FieldValidationException if the SKU is already assigned to another variant
+     * @throws ResourceNotFoundException if one or more attribute values do not exist
+    */
     private ProductVariant createVariant(Product product, ProductVariantRequest payload, int index){
 
-        // --- Check if product with same sku already exist ---
+        // Ensure the SKU is unique across product variants.
         if(productVariantRepository.existsBySku(payload.sku())){
             throw new FieldValidationException("variants[" + index + "].sku", "SKU is already exists.");
         }
@@ -649,7 +668,7 @@ public class ProductService {
         productVariant.setStockQuantity(payload.stockQuantity());
         productVariant.setIsActive(payload.isActive());
 
-        // Batch fetch attribute values to avoid N+1 queries
+        // Fetch attribute values in a single query to avoid N+1 queries.
         if (payload.attributeValueIds() != null && !payload.attributeValueIds().isEmpty()) {
             List<ProductAttributeValue> attributeValues = productAttributeValueRepository.findAllById(payload.attributeValueIds());
             
@@ -667,23 +686,34 @@ public class ProductService {
     }
 
 
-    // --- Upload files to file storage ---
+    /**
+     * Upload file to file storage
+     * 
+     * 
+     * @param files
+     * @return list of product file response
+     */
     private List<ProductFileResponse> uploadFiles(List<ProductFileRequest> files){
         List<ProductFileResponse> filesMetadata = new ArrayList<>();
         
         for (ProductFileRequest file : files) {
             UploadedFileResponse uploadedFile = fileStorage.upload(file.file(), "product");
-            filesMetadata.add(new ProductFileResponse(
-                uploadedFile,
-                file.isPrimary()
-            ));
+            filesMetadata.add(new ProductFileResponse(uploadedFile,file.isPrimary()));
         }
 
         return filesMetadata;
     }
 
 
-    // --- Get Product Image by Filename ---
+    /**
+     * Get file by filename
+     * 
+     * Load image as resource from file storage and if failed
+     * it has fallback image
+     * 
+     * @param filename
+     * @return resource for the actual file or image
+     */
     public Resource getImageByFilename(String filename){
         try {
             String productPath = "product/" + filename;
@@ -698,7 +728,20 @@ public class ProductService {
 
     // --------------- Public --------------------
 
-    // --- Get all products ---
+    /**
+     * Retrieves a paginated list of active products for the storefront.
+     *
+     * Supports keyword searching and category filtering, including products
+     * belonging to child categories.
+     *
+     * Includes product details and primary images.
+     *
+     * @param search the keyword used to filter products
+     * @param categorySlug the category slug used to filter products and their descendants
+     * @param pageable pagination and sorting information
+     * @return paginated active product information
+     * @throws ResourceNotFoundException if the specified category does not exist
+    */
     public PaginationResponse<PublicProductResponse> getAllActive(String search, String categorySlug, Pageable pageable){
 
         Specification<Product> spec = Specification.where(ProductSpecifications.isActive());
@@ -717,19 +760,15 @@ public class ProductService {
             spec = spec.and(ProductSpecifications.hasCategories(categoryIds));
         }
 
-        // Get all the paginated products
+        // Retrieve the paginated products matching the search criteria.
         Page<Product> productPage = productRepository.findAll(spec, pageable);
 
-
-        // Get paginated product content
         List<Product> products = productPage.getContent();
 
-
-        // Get product ids
         List<Long> productIds = products.stream().map(product -> product.getId()).toList();
 
 
-        // Get the files by product ids
+        // Retrieve primary images for all products in the current page.
         List<ProductFileListResponse> primaryImages = productFileRepository.findPrimaryImagesByProductIds(productIds)
             .stream().map(file -> new ProductFileListResponse(
                 file.getId(),
@@ -743,7 +782,7 @@ public class ProductService {
             )).toList();
 
 
-        // Group Product Image by product id
+        // Group primary images by product ID for efficient lookup.
         Map<Long, ProductFileListResponse> primaryImageByProduct = primaryImages.stream()
             .collect(Collectors.toMap(
                 file -> file.productId(),
@@ -785,7 +824,19 @@ public class ProductService {
     }
 
 
-    // --- Get product details by slug ---
+    /**
+     * Retrieves the details of an active product using its slug.
+     *
+     * Includes product information, images, available variants, variant attributes,
+     * and total stock quantity.
+     *
+     * For products with variants, retrieves their associated attribute values
+     * and calculates the total stock across all variants.
+     *
+     * @param slug the unique slug of the product
+     * @return the public product details response
+     * @throws ResourceNotFoundException if the product does not exist or is inactive
+    */
     public PublicProductDetailsResponse getProductBySlug(String slug){
 
         Product product = productRepository.findBySlug(slug)
@@ -795,7 +846,7 @@ public class ProductService {
         List<PublicVariantResponse> variants = new ArrayList<>();
         List<ProductAttributeWithValueResponse> variantAttributes = new ArrayList<>();
         
-        // Get all the product variants and variant attributes
+        // Retrieve product variants with their associated attribute values.
         if(Boolean.TRUE.equals(product.getHasVariants())){
 
             List<ProductVariant> productVariants = productVariantRepository.findByProductIdWithAttributeValues(product.getId());
@@ -820,13 +871,9 @@ public class ProductService {
                 })
                 .toList();
 
-            // Get product variant attribute and attribute values
+            // Group variant attribute values by product attribute.
             variantAttributes = productVariants.stream()
-                .flatMap(variant -> {
-
-                    return variant.getAttributeValues().stream();
-
-                })
+                .flatMap(variant -> variant.getAttributeValues().stream())
                 .collect(Collectors.groupingBy(
                     attributeValue -> attributeValue.getProductAttribute().getId(),
                     LinkedHashMap::new,
@@ -858,13 +905,13 @@ public class ProductService {
         }
 
 
-        // Get all the product images
+        // Retrieve all product image URLs.
         List<String> images = product.getFiles().stream()
-            .map(file -> {
-                return fileStorage.getUrl("files/public/product/images/" + file.getFilename());
-            }).toList();
+            .map(file -> fileStorage.getUrl("files/public/product/images/" + file.getFilename()))
+            .toList();
 
 
+        // Calculate total stock based on whether the product has variants.
         Integer stockQuantity = !product.getHasVariants() 
                 ? product.getStockQuantity() 
                 : product.getVariants().stream()
@@ -891,11 +938,55 @@ public class ProductService {
     }
 
 
-    // --- Get category for filter product ---
+    /**
+     * Retrieves top-level categories for the storefront product filters.
+     *
+     * @return a list of category filter responses
+    */
     public List<CategoryFilterResponse> getCategoryFiltersForStorefront() {
         List<Category> topLevelCategories = categoryRepository.findAllTopLevel();
         return topLevelCategories.stream()
             .map(this::toCategoryFilterResponse)
+            .toList();
+    }
+
+
+    /**
+     * Retrieves featured top-level categories for the storefront.
+     *
+     * Calculates the total number of products in each category, including
+     * products belonging to its child categories. Excludes categories
+     * without products and sorts the results by product count in descending order.
+     *
+     * @param limit the maximum number of categories to return (minimum 1, maximum 12)
+     * @return a list of featured categories sorted by product count
+    */
+    public List<FeaturedCategoryResponse> getFeaturedCategories(int limit){
+        
+        // Ensure the requested limit is within the allowed range.
+        int safeLimit = Math.min(Math.max(limit, 1), 12);
+
+        List<Object[]> productCountByCategory = productRepository.countProductsByCategory();
+
+        // Map direct product counts by category ID for efficient lookup.
+        Map<Long, Long> direct = productCountByCategory.stream()
+            .collect(Collectors.toMap(categoryId -> (Long) categoryId[0], productCount -> (Long) productCount[1]));
+
+        return categoryRepository.findAllTopLevel()
+            .stream()
+            .map(category -> {
+
+                // Include products from the category and all its descendants.
+                long total = collectCategoryAndChildIds(category).stream()
+                    .mapToLong(id -> direct.getOrDefault(id, 0L))
+                    .sum();
+
+                return new FeaturedCategoryResponse(category.getId(), category.getName(), total);
+            })
+            .filter(category -> category.productCount() > 0)
+            .sorted(Comparator.comparingLong((FeaturedCategoryResponse category) -> category.productCount()).reversed()
+                .thenComparing(category -> category.name(), String.CASE_INSENSITIVE_ORDER))
+            .limit(safeLimit)
             .toList();
     }
 
@@ -904,6 +995,19 @@ public class ProductService {
 
     
     // ---------------- Helper Function ----------------
+
+    public List<Long> collectCategoryAndChildIds(Category category) {
+        List<Long> ids = new ArrayList<>();
+        
+        ids.add(category.getId());
+
+        for (Category child : category.getChildren()) {
+            ids.addAll(collectCategoryAndChildIds(child));
+        }
+
+        return ids;
+    }
+
 
     private CategoryFilterResponse toCategoryFilterResponse(Category category) {
         List<CategoryFilterResponse> children = category.getChildren().stream()
@@ -942,7 +1046,6 @@ public class ProductService {
     }
 
 
-    // --- Generate unique slug ---
     private String generateUniquesSlug(String name){
         String baseSlug = SlugUtil.toSlug(name);
         String slug = baseSlug;
@@ -956,8 +1059,7 @@ public class ProductService {
         return slug;
     }
 
-
-    // --- Resolve slug ---
+    
     private String resolveSlug(String slug, String name) {
         String base = (slug != null && slug.isBlank()) ? slug : name;
         return generateUniquesSlug(base);

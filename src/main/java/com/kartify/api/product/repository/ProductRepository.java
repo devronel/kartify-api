@@ -67,6 +67,7 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     Integer countByCategoryIdIn(@Param("categoryIds") List<Long> categoryIds);
 
 
+    // Decrement stock
     @Modifying
     @Query("""
         UPDATE Product product
@@ -74,4 +75,9 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
         WHERE product.id = :id AND product.stockQuantity >= :qty
     """)
     int decrementStock(@Param("id") Long id, @Param("qty") int qty);
+
+
+    // Count product by category
+    @Query("SELECT product.category.id, COUNT(product) From Product product GROUP BY product.category.id")
+    List<Object[]> countProductsByCategory();
 }

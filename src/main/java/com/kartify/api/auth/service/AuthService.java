@@ -45,7 +45,7 @@ public class AuthService {
     private final TemplateEngine templateEngine;
     private final EmailService emailService;
 
-    @Value("${FRONTEND_URL}")
+    @Value("${app.url-storefront}")
     private String frontendUrl;
 
     @Value("${imagekit.public-url}")

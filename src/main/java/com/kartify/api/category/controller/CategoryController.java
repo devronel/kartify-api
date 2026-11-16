@@ -31,7 +31,7 @@ public class CategoryController {
         this.categoryService = categoryService;
     }
 
-    // --- Create Category endpoint ---
+
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<ApiResponse<CategoryResponse>> create(@Valid @RequestBody CategoryCreateRequest request){
@@ -39,7 +39,7 @@ public class CategoryController {
         return ResponseEntity.ok(ApiResponse.success("Category Created", createdCategory));
     }
 
-    // --- Update Category endpoint ---
+
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<CategoryResponse>> update(
@@ -50,14 +50,14 @@ public class CategoryController {
         return ResponseEntity.ok(ApiResponse.success("Category Updated", updatedCategory));
     }
 
-    // --- Get top level category ---
+
     @GetMapping
     public ResponseEntity<List<CategoryTreeResponse>> findTopLevelCategory() {
         List<CategoryTreeResponse> categories = categoryService.findTopLevelCategory();
         return ResponseEntity.ok(categories);
     }
 
-    // --- Get category by id ---
+    
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<CategoryResponse>> findCategoryById(@PathVariable Long id) {
         CategoryResponse category = categoryService.findCategoryById(id);

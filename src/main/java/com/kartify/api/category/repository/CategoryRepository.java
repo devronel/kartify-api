@@ -13,7 +13,9 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
 
     List<Category> findByParentId(Long parentId);
 
+
     Optional<Category> findBySlug(String slug);
+
 
     @Query("""
         SELECT category FROM 
@@ -23,6 +25,7 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
     """)
     List<Category> findAllTopLevel();
 
+
     @Query("""
         SELECT category FROM 
         Category category 
@@ -31,9 +34,11 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
     """)
     List<Category> findAllChild(@Param("parentId") Long parentId);
 
+
     @Query("SELECT MAX(category.sortOrder) FROM Category category WHERE category.parent IS NULL")
     Integer findMaxSortOrderForTopLevel();
 
+    
     @Query("SELECT MAX(category.sortOrder) FROM Category category WHERE category.parent.id = :parentId")
     Integer findMaxSortOrderByParentId(@Param("parentId") Long parentId);
 

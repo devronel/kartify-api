@@ -4,9 +4,9 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.kartify.api.product.entity.Product;
 import com.kartify.api.shared.BaseEntity;
 
-import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -25,6 +25,9 @@ public class Category extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @OneToMany(mappedBy = "category")
+    private List<Product> products;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_id")
@@ -66,6 +69,8 @@ public class Category extends BaseEntity {
 
     // --- Getter & Setter ---
     public Long getId() { return id; }
+
+    public List<Product> getProducts(){ return products; }
 
     public Category getParent() { return parent; }
     public void setParent(Category parent) { this.parent = parent; }

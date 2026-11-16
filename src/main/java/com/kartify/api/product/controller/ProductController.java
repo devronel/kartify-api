@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.kartify.api.product.dto.CategoryFilterResponse;
+import com.kartify.api.product.dto.FeaturedCategoryResponse;
 import com.kartify.api.product.dto.PublicProductDetailsResponse;
 import com.kartify.api.product.dto.PublicProductResponse;
 import com.kartify.api.product.service.ProductService;
@@ -27,14 +28,11 @@ public class ProductController {
 
     private final ProductService productService;
 
-    public ProductController(
-        ProductService productService
-    ){
+    public ProductController(ProductService productService){
         this.productService = productService;
     }
 
     
-    // --- Get all products ---
     @GetMapping
     public ResponseEntity<PaginationResponse<PublicProductResponse>> getAllActive(
         @RequestParam(name="q", required = false) String search,
@@ -50,30 +48,31 @@ public class ProductController {
         }
 
         Pageable pageable = PageRequest.of(page-1, pageSize, Sort.by(Sort.Direction.DESC, "updatedAt"));
-
         PaginationResponse<PublicProductResponse> products = productService.getAllActive(search, categorySlug, pageable);
-        
+
         return ResponseEntity.ok(products);
     }
 
 
-    // --- Product Details by slug ---
     @GetMapping("/{slug}")
     public ResponseEntity<PublicProductDetailsResponse> getProductBySlug(@PathVariable String slug) {
-
         PublicProductDetailsResponse product = productService.getProductBySlug(slug);
-
         return ResponseEntity.ok(product);
-
     }
 
 
     // Get categories for filter products
     @GetMapping("/filters/categories")
     public ResponseEntity<List<CategoryFilterResponse>> getCategoryFiltersForStorefront() {
-
         List<CategoryFilterResponse> categories = productService.getCategoryFiltersForStorefront();
+        return ResponseEntity.ok(categories);
 
+    }
+
+
+    @GetMapping("/featured/categories")
+    public ResponseEntity<List<FeaturedCategoryResponse>> getFeaturedCategories() {
+        List<FeaturedCategoryResponse> categories = productService.getFeaturedCategories(4);
         return ResponseEntity.ok(categories);
 
     }
