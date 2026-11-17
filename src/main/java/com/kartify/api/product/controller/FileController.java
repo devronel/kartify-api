@@ -22,7 +22,7 @@ public class FileController {
         this.productService = productService;
     }
 
-    // --- Get Product image  by filename and return the actual image ---
+    
     @GetMapping("/images/{filename}")
     public ResponseEntity<Resource> getImageByFilename(@PathVariable String filename) throws IOException{
         Resource img = productService.getImageByFilename(filename);

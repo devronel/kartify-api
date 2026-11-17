@@ -61,12 +61,10 @@ public class ProductController {
     }
 
 
-    // Get categories for filter products
     @GetMapping("/filters/categories")
     public ResponseEntity<List<CategoryFilterResponse>> getCategoryFiltersForStorefront() {
         List<CategoryFilterResponse> categories = productService.getCategoryFiltersForStorefront();
         return ResponseEntity.ok(categories);
-
     }
 
 
@@ -74,7 +72,6 @@ public class ProductController {
     public ResponseEntity<List<FeaturedCategoryResponse>> getFeaturedCategories() {
         List<FeaturedCategoryResponse> categories = productService.getFeaturedCategories(4);
         return ResponseEntity.ok(categories);
-
     }
 
 }

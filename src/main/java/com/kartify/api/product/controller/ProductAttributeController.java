@@ -29,7 +29,7 @@ public class ProductAttributeController {
         this.productAttributeService = productAttributeService;
     }
 
-    // --- Create product variant attribute ---
+
     @PostMapping
     public ResponseEntity<ApiResponse<ProductAttributeResponse>> create(
         @Valid @RequestBody ProductAttributeRequest request
@@ -38,7 +38,7 @@ public class ProductAttributeController {
         return ResponseEntity.ok(ApiResponse.success("Product Variant Attribute Created", createProductAttribute));
     }
 
-    // --- Create product variant attribute value ---
+
     @PostMapping("/values")
     public ResponseEntity<ApiResponse<ProductAttributeValueResponse>> createAttributeValue(
         @Valid @RequestBody ProductAttributeValueRequest request
@@ -47,7 +47,7 @@ public class ProductAttributeController {
         return ResponseEntity.ok(ApiResponse.success("Product Variant Attribute Value Created", attributeValueResponse));
     }
 
-    // --- Get all attribute with values ---
+    
     @GetMapping
     public ResponseEntity<List<ProductAttributeWithValueResponse>> findAllAttributesWithValues(){
         List<ProductAttributeWithValueResponse> productAttributeWithValues = productAttributeService.findAllAttributesWithValues();

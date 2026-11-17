@@ -69,7 +69,18 @@ public class AuthService {
         this.emailService = emailService;
     }
 
-    // --- Register ---
+    
+    /**
+     * Create new user account
+     * 
+     * Include creation of user details to save the first and last name
+     * of the user
+     * 
+     * @param request contains the required fields
+     * @return auth response
+     * @throws FieldValidationException if password and confirm password didn't match
+     * @throws FieldValidationException if email already register
+     */
     public AuthResponse register(RegisterRequest request) {
 
         if (!request.password().equals(request.confirmPassword())) {
@@ -99,18 +110,26 @@ public class AuthService {
         return this.buildAuthResponse(user, profilePicture);
     }
 
-    // --- Login ---
+    
+    /**
+     * Authenticate user
+     * 
+     * @param request contains user credentials
+     * @return auth response
+     * @throws ResourceNotFoundException if no user found
+     */
     public AuthResponse authenticate(LoginRequest request) {
-        // This triggers CustomUserDetailsService + password check internally
+        
+        // Authenticate the email and password by authentication manager
         Authentication authentication = authenticationManager.authenticate(
             new UsernamePasswordAuthenticationToken(request.email(), request.password())
         );
 
-        // Store the authenticated user in the security context — this is what creates the session
+        // Store the authenticated user in the security context to create session
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
         User user = userRepository.findByEmail(request.email())
-                .orElseThrow(() -> new IllegalStateException("User not found after authentication"));
+            .orElseThrow(() -> new ResourceNotFoundException("User not found after authentication"));
 
         UserFile profilePicture = userFileRepository.findByUserIdAndType(user.getId(), FileType.PROFILE_PICTURE)
             .orElse(null);
@@ -118,7 +137,15 @@ public class AuthService {
         return this.buildAuthResponse(user, profilePicture);
     }
 
-    // --- Get authenticated user information ---
+    
+    /**
+     * Get the authenticated user
+     * 
+     * 
+     * @param principal contains the authenticated user information
+     * @return auth response
+     * @throws ResourceNotFoundException if no user found
+     */
     public AuthResponse getUser(CustomUserDetails principal){
 
         User user = userRepository.findById(principal.getId())
@@ -130,7 +157,15 @@ public class AuthService {
         return this.buildAuthResponse(user, profilePicture);
     }
 
-    // --- Forgot Password ---
+
+    /**
+     * Forgot password
+     * 
+     * Send the password reset link to the email in parameter
+     * 
+     * @param email
+     * @return string message that the password already send to the email
+     */
     public String forgotPassword(String email)
     {
         Optional<User> userCheck = userRepository.findByEmail(email);
@@ -140,6 +175,7 @@ public class AuthService {
 
         User user = userCheck.get();
 
+        // Generate random string to password reset token
         SecureRandom random = new SecureRandom();
         byte[] bytes = new byte[32];
         random.nextBytes(bytes);
@@ -152,6 +188,8 @@ public class AuthService {
 
         passwordResetTokenRepository.save(resetToken);
 
+
+        // Generate the content body of the email
         Context context = new Context();
         context.setVariable("firstName", user.getUserDetail().getFirstName());
         context.setVariable("expiryMinutes", 15);
@@ -167,7 +205,22 @@ public class AuthService {
         return "If an account with that email exists, a password reset link has been sent.";
     }
 
-    // --- Change password ---
+    
+    /**
+     * Reset password
+     * 
+     * Use of reset password link sent to the email.
+     * 
+     * It includes the email, token and the update password.
+     * 
+     * @param request contains the required fields
+     * @return string
+     * @throws FieldValidationException if password and confirm password didn't match
+     * @throws PasswordResetException if the token is invalid
+     * @throws PasswordResetException if the token is expired
+     * @throws PasswordResetException if the token used already
+     * @throws FieldValidationException if the email not found
+     */
     @Transactional
     public String resetPasswordWithToken(PasswordResetRequest request){
 
@@ -175,39 +228,51 @@ public class AuthService {
             throw new FieldValidationException("password", "Password do not match");
         }
 
-        // --- Check if the email and token exists ---
         PasswordResetToken resetToken = passwordResetTokenRepository.findByEmailAndToken(request.email(), request.token())
             .orElseThrow(() ->
                 new PasswordResetException("Invalid token.")
             );
 
-        // --- Check if the token is aleady expired ---
+        
+        // Check if token is expired
         if (resetToken.getExpiresAt().isBefore(LocalDateTime.now())) {
             throw new PasswordResetException("Token has expired.");
         }
 
-        // --- Check if token is already used ---
+        // Check if token is already used
         if (resetToken.isUsed()) {
             throw new PasswordResetException("Token already used.");
         }
 
-        // --- Check the email if have exisiting user ---
+
         User user = userRepository.findByEmail(request.email()).orElseThrow(() ->
             new FieldValidationException("email", "Email not found.")
         );
 
-        // --- Hash the new password and save ---
+
         user.setPassword(passwordEncoder.encode(request.password()));
         userRepository.save(user);
 
-        // --- Invalidate the token to prevent reuse ---
+        // Invalidate the token to prevent reuse
         resetToken.setUsedAt(LocalDateTime.now());
         passwordResetTokenRepository.save(resetToken);
 
         return "Password changed successfully";
     }
 
-    // --- Validate Password Reset Token ---
+
+    /**
+     * Validate the password reset token
+     * 
+     * Verify the password reset link token and email if still available
+     * 
+     * @param email
+     * @param token
+     * @return string if token still available
+     * @throws FieldValidationException if invalid token
+     * @throws FieldValidationException if token is expired
+     * @throws FieldValidationException if token already used
+     */
     public String validatePasswordResetToken(String email, String token){
         PasswordResetToken resetToken = passwordResetTokenRepository.findByEmailAndToken(email, token)
             .orElseThrow(() ->

@@ -88,39 +88,53 @@ public class OrderService {
     this.fileStorage = fileStorage;
   }
 
-  // Create order
-  // OrderCreateResponse
+  
+  /**
+   * Create new order
+   * 
+   * Includes creation of order items, order status history, decrement the stock quantity of the actual product
+   * and clear the cart items after order creation.
+   * 
+   * Lock the cart table to prevent multiple transaction to modifying same data
+   * 
+   * @param userId
+   * @param payload contains only the addressId of the users
+   * @return order created id, order number and the total amount
+   * @throws ResourceNotFoundException if no address found
+   * @throws FieldValidationException if cart and cart item is empty
+   * @throws CartItemsUnavailableException if theres problem with the cart item like the 
+   *  actual product price changed, actual stock quantity is unavailable and etc.
+   *  
+   */
   public OrderCreateResponse create(Long userId, OrderCreateRequest payload){
 
-    // 1. Get user address
     UserAddress address = userAddressRepository.findByIdAndUserId(payload.addressId(), userId)
       .orElseThrow(() -> new ResourceNotFoundException("Address not found."));
 
-    // 2. Get all items in the user cart
+
     Cart cart = cartRepository.findByUserIdForUpdate(userId)
       .orElseThrow(() -> new FieldValidationException("cart", "Your cart is empty."));
 
-    
-    // 3.Get all the items in the cart and throw field validation if empty
+
     List<CartItem> cartItems = cart.getItems();
     if(cartItems.isEmpty()){
       throw new FieldValidationException("cart", "Your cart is empty.");
     }
 
 
-    // 4. Collect every problem in the cart items and throw them together
+    // Collect every problem in the cart items and throw them together
     List<ItemProblem> problems = findProblems(cartItems);
     if (!problems.isEmpty()) {
       log.warn("Checkout blocked for user {}: {}", userId, problems);
       throw new CartItemsUnavailableException(problems);
     }
 
+
     BigDecimal subtotal = cartItemSubtotal(cartItems);
     BigDecimal shippingFee = BigDecimal.ZERO;
     BigDecimal discountAmount = BigDecimal.ZERO;
 
 
-    // 5. Create new order
     Order order = new Order();
     order.setUser(address.getUser());
     order.setOrderNumber("ORD-" + Year.now().getValue() + "-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase());
@@ -141,7 +155,6 @@ public class OrderService {
     order.setShippingCountry(address.getCountry());
 
 
-    // 6. Create order items
     for (CartItem item : cartItems) {
       
       Product product = item.getProduct();
@@ -163,21 +176,16 @@ public class OrderService {
       order.addOrderItem(orderItem);
     }
 
-    // 7. Add order status history
+
+    // Add order status history
     order.addStatusHistory(OrderStatus.PENDING, null, address.getUser());
 
-
-    // 8. Save new order
     Order orderCreated = orderRepository.save(order);
 
-
-    // 9. Lock rows in the same order for every transaction
+    // Decrement stock of the actual product
     decrementStock(cartItems);
 
-    
-    // 10. Clear the cart
     cart.getItems().clear();
-
 
     return new OrderCreateResponse(
       orderCreated.getId(),
@@ -188,7 +196,18 @@ public class OrderService {
   }
 
 
-  // Change order status
+  /**
+   * Change order status
+   * 
+   * Includes creation of new order status history, Also checking of the next status
+   * because status have order like you can't transition from PAID to PENDING 
+   * 
+   * @param order
+   * @param next order status
+   * @param notes
+   * @param changeBy entity who update the status
+   * @throws IllegalStateException if the next status is wrong and invalid
+   */
   @Transactional
   public void changeStatus(Order order, OrderStatus next, String notes, User changeBy){
     
@@ -204,7 +223,17 @@ public class OrderService {
   }
 
 
-  // Get all user orders
+  /**
+   * Get all user orders
+   * 
+   * Include the checking of each order if payable. List of items, items count
+   * and associated primary images of items.
+   * 
+   * @param userId
+   * @param status
+   * @param pageable
+   * @return pageable order response with list of order details
+   */
   public PaginationResponse<OrderResponse> getAll(Long userId, OrderStatus status, Pageable pageable){
 
     Page<Order> orderPage = orderRepository.findByUserId(userId, status, pageable);
@@ -217,7 +246,7 @@ public class OrderService {
 
     List<Payment> payments = paymentRepository.findAllDesc(orderIds);
 
-    // Count all the order items
+    // Map for product items count per order item
     Map<Long, Integer> itemCountByOrderId = orderItems.stream()
       .collect(Collectors.groupingBy(
         orderItem -> orderItem.getOrder().getId(),
@@ -225,7 +254,7 @@ public class OrderService {
       ));
 
 
-    // Create a map for order items
+    // Map for list of product items per order item
     Map<Long, List<OrderItemsResponse>> orderItemsMap = orderItems.stream()
     .collect(Collectors.groupingBy(
       item -> item.getOrder().getId(),
@@ -241,7 +270,7 @@ public class OrderService {
     ));
 
 
-    // Create a map for latest payment in each order
+    // Map of latest payment per order item
     Map<Long, PaymentSummaryResponse> latestPayments = payments.stream()
       .collect(Collectors.toMap(
         orderItem -> orderItem.getOrder().getId(),
@@ -260,7 +289,6 @@ public class OrderService {
 
     List<OrderResponse> orderResponse = orders.stream()
       .map(order -> {
-
         boolean isPayable = order.isPayable(now, PENDING_HOLD);
         boolean isExpired = order.isExpired(now, PENDING_HOLD);
         LocalDateTime expiresAt = order.getStatus() == OrderStatus.PENDING ? order.expiresAt(PENDING_HOLD) : null;
@@ -297,17 +325,27 @@ public class OrderService {
   }
 
 
-  // Get order details
+  /**
+   * Get order details by urder id and order number
+   * 
+   * Includes all the information of orders such as product items, payment status,
+   * order status histories and if the order is still payable or already expired.
+   * 
+   * @param userId
+   * @param orderNumber
+   * @return order details
+   * @throws ResourceNotFoundException if order and payment not found.
+   */
   public OrderDetailsResponse getDetail(Long userId, String orderNumber){
     
     Order order = orderRepository.findByOrderNumberAndUserId(orderNumber, userId)
       .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
 
+    
     Payment payment = paymentRepository.findFirstByOrderIdOrderByCreatedAtDesc(order.getId())
       .orElseThrow(() -> new ResourceNotFoundException("Payment not Found."));    
 
     
-    // Get the list of order items
     List<OrderItemsResponse> orderItems = order.getOrderItems().stream()
       .map(item -> new OrderItemsResponse(
         item.getId(),
@@ -321,13 +359,13 @@ public class OrderService {
       .toList();
 
     
-    // Get the latest payment summary
     PaymentSummaryResponse paymentSummaryResponse = new PaymentSummaryResponse(
       payment.getStatus(),
       payment.getPaymentMethod(),
       payment.getCheckoutUrl(),
       payment.getPaidAt()
     );
+
 
     // Get the list of order status history
     List<OrderStatusHistoryResponse> timeline = order.getOrderStatusHistories()
@@ -375,7 +413,18 @@ public class OrderService {
   }
 
 
-  // Return all the errors of cart items
+  /**
+   * Find problems in the cart items
+   * 
+   * It check problem like the actual product price not match in the cart items possibly because
+   * admin changes the price, stock quantity is not available possibly 
+   * the actual product is out of stock and variant mismatch and etc.
+   * 
+   * View the list of condition in checkItem() function
+   * 
+   * @param items from cart
+   * @return list of item problem
+   */
   public List<ItemProblem> findProblems(List<CartItem> items) {
     List<ItemProblem> problems = new ArrayList<>();
     for (CartItem item : items) {
@@ -385,7 +434,16 @@ public class OrderService {
   }
 
 
-  // Check cart item and return the error found
+  /**
+   * Check the item the cart
+   * 
+   * It check problem like the actual product price not match in the cart items possibly because
+   * admin changes the price, stock quantity is not available possibly 
+   * the actual product is out of stock and variant mismatch and etc.
+   * 
+   * @param item
+   * @return cart item problem or empty if no problem
+   */
   public Optional<ItemProblem> checkItem(CartItem item) {
     Product product = item.getProduct();
     ProductVariant variant = item.getProductVariant();
@@ -469,10 +527,19 @@ public class OrderService {
   }
 
 
-  // Decrement the product stock
+  /**
+   * Decrements the stock of products or product variants in the cart.
+   *
+   * Processes stock updates in a consistent order to reduce the risk
+   * of database deadlocks during concurrent checkouts.
+   *
+   * @param items the cart items whose stock should be decremented
+   * @throws CartItemsUnavailableException if any item has insufficient stock
+   */
   private void decrementStock(List<CartItem> items) {
-    // Lock rows in the same order for every transaction: simple products first,
-    // then variants, each by the ID of the row being updated
+
+    // Sort stock updates by type and ID to ensure concurrent checkout transactions
+    // acquire database row locks in a consistent order, reducing the risk of deadlocks.
     List<CartItem> sorted = items.stream()
       .sorted(Comparator
         .comparing((CartItem i) -> i.getProductVariant() != null)
@@ -503,7 +570,7 @@ public class OrderService {
   }
 
 
-  // Sum all items in the cart
+  
   private BigDecimal cartItemSubtotal(List<CartItem> cartItems){
 
     return cartItems.stream()

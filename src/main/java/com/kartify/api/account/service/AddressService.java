@@ -24,7 +24,13 @@ public class AddressService {
         this.userAddressRepository = userAddressRepository;
     }
 
-    // --- Get All Address ---
+    /**
+     * Get all user address
+     * 
+     * @param userId
+     * @return AddressResponse contains list of addresses
+     * @throws ResourceNotFoundException if no user found
+     */
     public List<AddressResponse> getAddresses(Long userId){
         
         User user = userRepository.findById(userId)
@@ -33,11 +39,22 @@ public class AddressService {
         List<UserAddress> addresses = userAddressRepository.findByUserId(user.getId());
 
         return addresses.stream()
-                .map(address -> toResponse(address))
-                .toList();
+            .map(address -> toResponse(address))
+            .toList();
     }
 
-    // --- Get address by id ---
+    
+    /**
+     * Get address by id and user_id
+     * 
+     * Query both address id and user id to ensure that the address is from
+     * the currently authenticated user
+     * 
+     * @param userId
+     * @param id
+     * @return AddressResponse contains the information of the address
+     * @throws ResourceNotFoundException if no address found on the current auth user
+     */
     public AddressResponse getAddress(Long userId, Long id){
     
         UserAddress address = userAddressRepository.findByIdAndUserId(id, userId)
@@ -46,7 +63,18 @@ public class AddressService {
         return toResponse(address);
     }
 
-    // --- Create Address ----
+    
+    /**
+     * Create new address
+     * 
+     * Include all the address information, set the current auth user
+     * to that address and set primary address
+     * 
+     * @param userId
+     * @param payload contains required address information
+     * @return AddressResponse
+     * @throws ResourceNotFoundException if no user found
+     */
     public AddressResponse createAddress(Long userId, AddressRequest payload){
 
         User user = userRepository.findById(userId)
@@ -69,6 +97,7 @@ public class AddressService {
         
         List<UserAddress> existingAddresses = userAddressRepository.findByUserId(user.getId());
 
+        // Check if their's already have primary address in the current existing address of the user
         if (existingAddresses.isEmpty()) {
             userAddress.setIsDefault(true);
         } else if (Boolean.TRUE.equals(payload.isDefault())) {
@@ -84,7 +113,20 @@ public class AddressService {
 
     }
 
-    // --- Update Address ---
+    
+    /**
+     * Update address
+     * 
+     * Update all the important address fields aside from primary
+     * because setting default address is separate
+     * 
+     * @param userId
+     * @param addressId
+     * @param payload contains all the updated fields
+     * @return AddressResponse
+     * @throws ResourceNotFoundException if no user found
+     * @throws ResourceNotFoundException if no address found
+     */
     public AddressResponse updateAddress(Long userId, Long addressId, AddressUpdateRequest payload){
 
         userRepository.findById(userId)
@@ -112,7 +154,20 @@ public class AddressService {
 
     }
 
-    // --- Delete address ---
+    
+    /**
+     * Deleted address
+     * 
+     * Check both user id and address id to ensure that the deleted address is
+     * from that user.
+     * 
+     * If the default address is deleted it switch the default to the first address found
+     * 
+     * @param userId
+     * @param addressId
+     * @return string message that the address is deleted
+     * @throws ResourceNotFoundException if no address found
+    */
     public String deleteAddress(Long userId, Long addressId){
 
         UserAddress userAddress = userAddressRepository.findByIdAndUserId(addressId, userId)
@@ -132,7 +187,19 @@ public class AddressService {
         return "Address Deleted";
     }
 
-    // --- Set Default Address ---
+    
+    /**
+     * Set default address
+     * 
+     * Unset the current default address first and set the new default to the
+     * selected address
+     * 
+     * @param userId
+     * @param addressId
+     * @return address response
+     * @throws ResourceNotFoundException if no user found
+     * @throws ResourceNotFoundException if no address found
+     */
     public AddressResponse setDefaultAddress(Long userId, Long addressId) {
 
         userRepository.findById(userId)
@@ -145,10 +212,18 @@ public class AddressService {
         address.setIsDefault(true);
 
         UserAddress userAddressUpdated = userAddressRepository.save(address);
+        
         return toResponse(userAddressUpdated);
     }
 
-    // --- Unset the current default address ---
+    
+    /**
+     * Unset the current default address
+     * 
+     * Find first the default and update it to false
+     * 
+     * @param userId
+     */
     private void unsetCurrentDefault(Long userId) {
         userAddressRepository.findByUserIdAndIsDefaultTrue(userId)
             .ifPresent(current -> {
@@ -157,7 +232,7 @@ public class AddressService {
             });
     }
 
-    // --- Map the response ---
+    
     private AddressResponse toResponse(UserAddress payload){
         return new AddressResponse(
             payload.getId(),

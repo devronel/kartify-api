@@ -30,7 +30,12 @@ public class ProductAttributeService {
         this.productAttributeValueRepository = productAttributeValueRepository;
     }
 
-    // --- Create product variant attribute ---
+    /**
+     * Create new variant attribute
+     * 
+     * @param payload contains the data of new variant attribute
+     * @return product attribute response
+     */
     @Transactional
     public ProductAttributeResponse create(ProductAttributeRequest payload){
 
@@ -45,12 +50,23 @@ public class ProductAttributeService {
         );
     }
 
-    // --- Create product variant attribute value ---
+
+    /**
+     * Create new attribute value
+     * 
+     * Find the variant attribute for this new attribute value
+     * to make a relation
+     * 
+     * 
+     * @param payload contains data for attribute value
+     * @return product attribute value response
+     * @throws ResourceNotFoundException if the parent attribute for this value not found
+     */
     @Transactional
     public ProductAttributeValueResponse createAttributeValue(ProductAttributeValueRequest payload){
 
         ProductAttribute productAttribute = productAttributeRepository.findById(payload.productAttributeId())
-                .orElseThrow(() -> new ResourceNotFoundException("No product attribute found."));
+            .orElseThrow(() -> new ResourceNotFoundException("No product attribute found."));
 
         ProductAttributeValue attributeValue = new ProductAttributeValue();
         attributeValue.setProductAttribute(productAttribute);
@@ -66,22 +82,27 @@ public class ProductAttributeService {
 
     }
 
-    // --- Get all the arribute with values
+    /**
+     * Retrieve all the attribute
+     * 
+     * Includes each variants attribute its attribute values
+     * 
+     * @return product attribute with attribute values
+    */
     public List<ProductAttributeWithValueResponse> findAllAttributesWithValues(){
 
         List<ProductAttribute> productAttributes = productAttributeRepository.findAll();
 
         return productAttributes.stream()
             .map(attribute -> new ProductAttributeWithValueResponse(
-                    attribute.getId(),
-                    attribute.getName(),
-                    attribute.getAttributeValues().stream()
-                            .map(value -> new ProductAttributeValueResponse(
-                                    value.getId(),
-                                    value.getProductAttribute().getId(),
-                                    value.getValue()
-                            ))
-                            .toList()
+                attribute.getId(),
+                attribute.getName(),
+                attribute.getAttributeValues().stream()
+                    .map(value -> new ProductAttributeValueResponse(
+                        value.getId(),
+                        value.getProductAttribute().getId(),
+                        value.getValue()
+                    )).toList()
             ))
             .toList();
     }

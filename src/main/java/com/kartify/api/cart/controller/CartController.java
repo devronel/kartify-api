@@ -46,7 +46,6 @@ public class CartController {
   }
 
 
-  // Add new item in the cart
   @PreAuthorize("@accountAuthorization.isEmailVerified(principal)")
   @PostMapping
   public ResponseEntity<CartItemResponse> addItem(@AuthenticationPrincipal CustomUserDetails principal, @Valid @RequestBody CartItemCreateRequest request) {
@@ -58,7 +57,6 @@ public class CartController {
   }
 
 
-  // Get all cart items
   @PreAuthorize("@accountAuthorization.isEmailVerified(principal)")
   @GetMapping
   public ResponseEntity<CartResponse> getAllItem(
@@ -72,7 +70,6 @@ public class CartController {
   }
 
 
-  // Remove item from the cart
   @PreAuthorize("@accountAuthorization.isEmailVerified(principal)")
   @DeleteMapping("/items/{id}")
   public ResponseEntity<Void> removeItem(
@@ -87,7 +84,6 @@ public class CartController {
   }
 
 
-  // Update item quantity
   @PreAuthorize("@accountAuthorization.isEmailVerified(principal)")
   @PatchMapping("/items/{id}")
   public ResponseEntity<ItemQuantityUpdateResponse> updateQuantity(
@@ -105,7 +101,6 @@ public class CartController {
   }
 
 
-  // Get total cart quantity
   @PreAuthorize("@accountAuthorization.isEmailVerified(principal)")
   @GetMapping("/items/count")
   public ResponseEntity<Integer> getTotalCartQuantity(@AuthenticationPrincipal CustomUserDetails principal) {

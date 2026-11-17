@@ -11,6 +11,7 @@ import com.kartify.api.cart.entity.Cart;
 import com.kartify.api.cart.entity.CartItem;
 import com.kartify.api.cart.repository.CartRepository;
 import com.kartify.api.contract.FileStorage;
+import com.kartify.api.exception.FieldValidationException;
 import com.kartify.api.exception.PaymentCreationRejectedException;
 import com.kartify.api.exception.PaymentCreationUnknownException;
 import com.kartify.api.exception.ResourceNotFoundException;
@@ -56,7 +57,19 @@ public class CheckoutService {
   }
 
 
-  // Process and Pay the Order
+  /**
+   * Places an order and initiates payment through the payment provider.
+   *
+   * Creates the order and payment record first, then requests a payment link
+   * from the provider. Updates the payment record based on the result of the
+   * payment creation request.
+   *
+   * @param userId
+   * @param payload contains order details
+   * @return the checkout response containing the order number and payment URL
+   * @throws PaymentCreationRejectedException if the payment provider rejects the request
+   * @throws PaymentCreationUnknownException if the payment creation result cannot be determined
+   */
   public CheckoutResponse placeOrder(Long userId,  OrderCreateRequest payload){
 
     OrderPaymentResponse order = paymentService.createOrderAndPayment(userId, payload);
@@ -84,9 +97,11 @@ public class CheckoutService {
       );
       
     } catch (PaymentCreationRejectedException e) {
+      // The provider explicitly rejected the payment creation request.
       paymentService.updateStatus(order.paymentId(), order.orderId(), PaymentStatus.SETUP_FAILED);
       throw e;
     } catch (PaymentCreationUnknownException e) {
+      // The provider's response is uncertain, so the same idempotency key can be reused.
       paymentService.updateStatus(order.paymentId(), order.orderId(), PaymentStatus.CREATION_UNKNOWN);
       throw e;
     }
@@ -94,7 +109,19 @@ public class CheckoutService {
   }
 
 
-  // Retry Payment
+  /**
+   * Retries payment creation for an existing order.
+   *
+   * Prepares a new payment attempt or reuses the existing attempt when its
+   * creation result is unknown. Requests a payment link from the provider
+   * and updates the payment record based on the result.
+   *
+   * @param userId
+   * @param orderNumber the order number to retry payment for
+   * @return the checkout response containing the order number and payment URL
+   * @throws PaymentCreationRejectedException if the payment provider rejects the request
+   * @throws PaymentCreationUnknownException if the payment creation result cannot be determined
+   */
   public CheckoutResponse retryPayment(Long userId, String orderNumber){
 
     PaymentAttemptResponse attemp = paymentService.prepareRetry(userId, orderNumber);
@@ -121,9 +148,11 @@ public class CheckoutService {
       );
 
     } catch (PaymentCreationRejectedException e) {
+      // The provider explicitly rejected the payment creation request.
       paymentService.updateStatus(attemp.paymentId(), attemp.orderId(), PaymentStatus.SETUP_FAILED);
       throw e;
     } catch (PaymentCreationUnknownException e) {
+      // The provider's response is uncertain, so the same idempotency key can be reused.
       paymentService.updateStatus(attemp.paymentId(), attemp.orderId(), PaymentStatus.CREATION_UNKNOWN);
       throw e;
     }
@@ -131,7 +160,16 @@ public class CheckoutService {
   }
 
 
-  // Get checkout information
+  /**
+   * Retrieves the information required for the checkout page.
+   *
+   * Includes the user's cart items, saved addresses, and order subtotal
+   * and total. Shipping fees and discounts are currently set to zero.
+   *
+   * @param userId
+   * @return the checkout details containing cart items, addresses, and order totals
+   * @throws ResourceNotFoundException if the user's cart does not exist or contains no items
+  */
   public CheckoutDetailsResponse getDetail(Long userId){
 
     Cart cart = cartRepository.findByUserId(userId)

@@ -56,7 +56,21 @@ public class CartService {
     this.fileStorage = fileStorage;
   }
 
-  // Create cart and cart items
+  
+  /**
+   * Adds a product to the user's cart.
+   *
+   * Creates a cart if the user does not have one and reactivates
+   * an abandoned cart when necessary. If the product already exists
+   * in the cart, its quantity is increased.
+   *
+   * @param userId the ID of the user
+   * @param payload the product and quantity to add to the cart
+   * @return the added or updated cart item response
+   * @throws ResourceNotFoundException if the user, product, or specified product variant does not exist
+   * @throws FieldValidationException if a required product variant is not selected
+   * @throws InsufficientStockException if the requested quantity exceeds available stock
+   */
   public CartItemResponse addItem(Long userId, CartItemCreateRequest payload){
 
     User user = userRepository.findById(userId)
@@ -102,53 +116,59 @@ public class CartService {
     }
 
 
-    //Check if the uplcoming data already in the cart items
+    // Check if the uplcoming data already in the cart items
     Optional<CartItem> cartItem = payload.productVariantId() != null
       ? cartItemRepository.findByCartIdAndProductIdAndProductVariantId(cart.getId(), payload.productId(), payload.productVariantId())
       : cartItemRepository.findByCartIdAndProductIdAndProductVariantIdIsNull(cart.getId(), payload.productId());
 
 
-      // Determine available stock (variant-level if applicable, otherwise product-level)
-      Integer availableStock = variant != null ? variant.getStockQuantity() : product.getStockQuantity();
+    // Determine available stock (variant-level if applicable, otherwise product-level)
+    Integer availableStock = variant != null ? variant.getStockQuantity() : product.getStockQuantity();
 
 
-      CartItem saved;
+    CartItem saved;
 
       
-      if (cartItem.isPresent()) {
-        CartItem existing = cartItem.get();
-        int newQuantity = existing.getQuantity() + payload.quantity();
+    if (cartItem.isPresent()) {
+      CartItem existing = cartItem.get();
+      int newQuantity = existing.getQuantity() + payload.quantity();
 
-        if (newQuantity > availableStock) {
-            throw new InsufficientStockException("Not enough stock available.");
-        }
-
-        existing.setQuantity(newQuantity);
-        saved = cartItemRepository.save(existing);
-
-      } else {
-        if (payload.quantity() > availableStock) {
+      if (newQuantity > availableStock) {
           throw new InsufficientStockException("Not enough stock available.");
-        }
-
-        CartItem newItem = new CartItem();
-        newItem.setCart(cart);
-        newItem.setProduct(product);
-        newItem.setProductVariant(variant);
-        newItem.setQuantity(payload.quantity());
-
-        BigDecimal price = (variant != null) ? variant.getPrice() : product.getPrice();
-        newItem.setPrice(price);
-
-        saved = cartItemRepository.save(newItem);
       }
 
-      return toResponse(saved);
+      existing.setQuantity(newQuantity);
+      saved = cartItemRepository.save(existing);
 
+    } else {
+      if (payload.quantity() > availableStock) {
+        throw new InsufficientStockException("Not enough stock available.");
+      }
+
+      CartItem newItem = new CartItem();
+      newItem.setCart(cart);
+      newItem.setProduct(product);
+      newItem.setProductVariant(variant);
+      newItem.setQuantity(payload.quantity());
+
+      BigDecimal price = (variant != null) ? variant.getPrice() : product.getPrice();
+      newItem.setPrice(price);
+
+      saved = cartItemRepository.save(newItem);
     }
 
+    return toResponse(saved);
+
+  }
+
   
-  // Get all the item in the cart
+  /**
+   * Get all cart items
+   * 
+   * @param userId
+   * @return cart response
+   * @throws ResourceNotFoundException if no user found
+   */
   public CartResponse getAllItems(Long userId){
 
     User user = userRepository.findById(userId)
@@ -163,11 +183,13 @@ public class CartService {
       .map(item -> toResponse(item))
       .toList();
 
+    // Sum all the items quantity in the cart items
     int totalQuantity = cartItems.stream().mapToInt(item -> item.quantity()).sum();
     
+    // Sum all the items subtotal in the cart items
     BigDecimal subtotal = cartItems.stream()
-        .map(item -> item.subtotal())
-        .reduce(BigDecimal.ZERO, (current , next) -> current.add(next));
+      .map(item -> item.subtotal())
+      .reduce(BigDecimal.ZERO, (current , next) -> current.add(next));
 
     Boolean hasUnavailableItems = cartItems.stream().anyMatch(item -> !item.isAvailable());
 
@@ -181,7 +203,13 @@ public class CartService {
   }
 
 
-  // Remove item from the cart
+  /**
+   * Delete item from the cart
+   * 
+   * @param userId
+   * @param cartItemId
+   * @throws ResourceNotFoundException if no cart and cart items not found
+   */
   public void removeItem(Long userId, Long cartItemId){
 
     Cart cart = cartRepository.findByUserId(userId)
@@ -195,7 +223,19 @@ public class CartService {
   }
 
 
-  // Update item quantity
+  /**
+   * Update cart item quantity
+   * 
+   * Recalculate the subtotal when the items quantity changed
+   * 
+   * @param userId
+   * @param cartItemId
+   * @param quantity
+   * @return item quantity update
+   * @throws IllegalArgumentException if quantity is less than zero
+   * @throws ResourceNotFoundException if cart and cart items not found
+   * @throws InsufficientStockException if current product stock is low than the requested stock quantity
+   */
   public ItemQuantityUpdateResponse updateQuantity(Long userId, Long cartItemId, Integer quantity){
 
     if (quantity <= 0) {
@@ -238,7 +278,12 @@ public class CartService {
   }
 
 
-  // Get cart summary like total items
+  /**
+   * Get the total cart item quantity
+   * 
+   * @param userId
+   * @return integer total of items in the cart
+   */
   public Integer getTotalCartQuantity(Long userId){
     
     User user = userRepository.findById(userId)
@@ -252,7 +297,8 @@ public class CartService {
 
   }
 
-  // Creating Response
+  
+  // Helper
   private CartItemResponse toResponse(CartItem cartItem){
 
     String filename = cartItem.getProduct().getFiles().stream()

@@ -34,12 +34,22 @@ public class ProfileService {
         this.fileStorage = fileStorage;
     }
 
-    // --- Create Or Update User Detail ---
+    
+    /**
+     * Create or Update profile information
+     * 
+     * 
+     * @param userId
+     * @param payload contains the required fields
+     * @return profile response
+     * @throws ResourceNotFoundException if user not found
+     */
     public ProfileResponse upsertProfile(Long userId, ProfileRequest payload)
     {
         User user = userRepository.findById(userId)
-            .orElseThrow(() -> new RuntimeException("User not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
+        // Link the new user details to the user if don't have user detail
         UserDetail detail = user.getUserDetail();
         if (detail == null) {
             detail = new UserDetail();
@@ -64,7 +74,14 @@ public class ProfileService {
         );
     }
 
-    // --- Get User Detail ---
+    
+    /**
+     * Get user user details
+     * 
+     * @param userId
+     * @return profile response
+     * @throws ResourceNotFoundException if no user found
+     */
     public ProfileResponse getProfileInformation(Long userId){
 
         User user = userRepository.findById(userId)
@@ -82,13 +99,25 @@ public class ProfileService {
         
     }
 
-    // --- Upload profile picture ---
+    
+    /**
+     * Upload profile picture
+     * 
+     * Upload image to the file storage and save the metadata
+     * to the database.
+     * 
+     * @param userId
+     * @param file contains the Uploaded file object
+     * @return profile picture response
+     * @throws ResourceNotFoundException if no user found
+    */
     @Transactional
     public ProfilePictureResponse uploadProfilePicture(Long userId, MultipartFile file) {
 
         User user = userRepository.findById(userId)
-            .orElseThrow(() -> new RuntimeException("User not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
+        // Check if already have profile picture if don't have, create new one
         UserFile userFile = userFileRepository
             .findByUserIdAndType(userId, FileType.PROFILE_PICTURE)
             .orElseGet(() -> {

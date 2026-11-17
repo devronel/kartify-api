@@ -43,7 +43,6 @@ public class ProductAdminController {
     }
 
 
-    // --- Add new product ---
     @PostMapping
     public ResponseEntity<ApiResponse<ProductResponse>> create(@Valid @ModelAttribute ProductCreateRequest request){
         ProductResponse product = productService.create(request);
@@ -51,7 +50,6 @@ public class ProductAdminController {
     }
 
 
-    // --- Get all products with pagination ---
     @GetMapping
     public ResponseEntity<PaginationResponse<ProductAdminListResponse>> getAll(
         @RequestParam(name = "q", required = false) String search,
@@ -64,26 +62,20 @@ public class ProductAdminController {
                 "pageSize must be between 1 and " + MAX_PAGE_SIZE
             );
         }
-
         Pageable pageable = PageRequest.of(page-1, pageSize, Sort.by(Sort.Direction.DESC, "updatedAt"));
-
         PaginationResponse<ProductAdminListResponse> products = productService.getAll(search, pageable);
         
         return ResponseEntity.ok(products);
     }
 
 
-    // --- Get Product Details by id ---
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<ProductEditResponse>> getById(@PathVariable Long id) {
-
         ProductEditResponse productEditResponse = productService.getById(id);
-
         return ResponseEntity.ok(ApiResponse.success("Get product!", productEditResponse));
     }
 
 
-    // --- Update product ---
     @PutMapping("/{id}")
     public ResponseEntity<Void> update(@PathVariable Long id, @Valid @ModelAttribute ProductUpdateRequest payload) {
 
@@ -97,26 +89,19 @@ public class ProductAdminController {
     }
     
 
-    // --- Delete product ---
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id){
-
         productService.delete(id);
-
         return ResponseEntity.noContent().build();
-
     }
 
     
-    // --- Toggle product active ---
     @PatchMapping("/{id}/active")
     public ResponseEntity<Void> updateActive(
         @PathVariable Long id,
         @RequestBody Map<String, Boolean> body
     ){
-
         Boolean active = body.get("active");
-
         productService.updateActive(id, active);
 
         return ResponseEntity.noContent().build();
