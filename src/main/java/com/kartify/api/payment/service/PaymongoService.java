@@ -34,6 +34,7 @@ public class PaymongoService implements PaymentProvider {
     this.objectMapper = objectMapper;
   }
 
+
   public PaymentLink process(PaymentLinkRequest data) {
     
     HttpResponse<String> response;
@@ -74,7 +75,7 @@ public class PaymongoService implements PaymentProvider {
     if (status == 201) {
       try {
         JsonNode pmResponse = objectMapper.readTree(response.body())
-            .path("data");
+          .path("data");
 
         String paymentId = pmResponse.path("id").asString();
         String checkoutUrl = pmResponse.path("url").asString();
@@ -101,9 +102,9 @@ public class PaymongoService implements PaymentProvider {
     }
 
     if (status >= 400 && status < 500) {
-        throw new PaymentCreationRejectedException(
-          "PayMongo rejected the request: " + response.body()
-        );
+      throw new PaymentCreationRejectedException(
+        "PayMongo rejected the request: " + response.body()
+      );
     }
 
     // Treat unexpected responses, especially 5xx, conservatively.
