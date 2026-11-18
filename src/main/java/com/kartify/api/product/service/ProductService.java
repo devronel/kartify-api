@@ -1008,7 +1008,7 @@ public class ProductService {
     */
     public PaginationResponse<PublicProductResponse> getAllNewArrival(Pageable pageable){
 
-        Page<Product> productPage = productRepository.findAllNewArrival(LocalDateTime.now().minusDays(60), pageable);
+        Page<Product> productPage = productRepository.findAllNewArrival(LocalDateTime.now().minusDays(30), pageable);
 
         List<Product> products = productPage.getContent();
 
