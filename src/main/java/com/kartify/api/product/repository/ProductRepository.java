@@ -1,5 +1,6 @@
 package com.kartify.api.product.repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -63,6 +64,7 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
         SELECT COUNT(product)
         FROM Product product 
         WHERE product.category.id IN :categoryIds
+            AND product.isActive = TRUE
     """)
     Integer countByCategoryIdIn(@Param("categoryIds") List<Long> categoryIds);
 
@@ -80,4 +82,15 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     // Count product by category
     @Query("SELECT product.category.id, COUNT(product) From Product product GROUP BY product.category.id")
     List<Object[]> countProductsByCategory();
+
+
+    // Get new arrival products
+    @Query("""
+        SELECT product FROM Product product
+        WHERE product.isActive = TRUE
+            AND product.stockQuantity > 0
+            AND product.createdAt >= :cutoff
+        ORDER BY product.createdAt DESC
+    """)
+    Page<Product> findAllNewArrival(@Param("cutoff") LocalDateTime cutoff, Pageable pageable);
 }

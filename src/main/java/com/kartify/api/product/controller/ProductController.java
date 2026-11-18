@@ -74,4 +74,24 @@ public class ProductController {
         return ResponseEntity.ok(categories);
     }
 
+
+    @GetMapping("/new-arrival")
+    public ResponseEntity<PaginationResponse<PublicProductResponse>> getAllNewArrival(
+        @RequestParam(defaultValue = "1") int page,
+        @RequestParam(defaultValue = "" + DEFAULT_PAGE_SIZE) int pageSize
+    ){
+
+        if(pageSize < 1 || pageSize > MAX_PAGE_SIZE){
+            throw new IllegalArgumentException(
+                "pageSize must be between 1 and " + MAX_PAGE_SIZE
+            );
+        }
+
+        Pageable pageable = PageRequest.of(page-1, pageSize);
+        
+        PaginationResponse<PublicProductResponse> products = productService.getAllNewArrival(pageable);
+
+        return ResponseEntity.ok(products);
+    } 
+
 }

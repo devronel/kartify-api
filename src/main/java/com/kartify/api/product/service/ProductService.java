@@ -1,6 +1,7 @@
 package com.kartify.api.product.service;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -981,13 +982,92 @@ public class ProductService {
                     .mapToLong(id -> direct.getOrDefault(id, 0L))
                     .sum();
 
-                return new FeaturedCategoryResponse(category.getId(), category.getName(), total);
+                return new FeaturedCategoryResponse(
+                    category.getId(), 
+                    category.getName(), 
+                    category.getSlug(), 
+                    total
+                );
             })
             .filter(category -> category.productCount() > 0)
             .sorted(Comparator.comparingLong((FeaturedCategoryResponse category) -> category.productCount()).reversed()
                 .thenComparing(category -> category.name(), String.CASE_INSENSITIVE_ORDER))
             .limit(safeLimit)
             .toList();
+    }
+
+
+    /**
+     * Get all new arrival product
+     * 
+     * It get the product that is active, have stocks and
+     * product created within the last 30 days. 
+     * 
+     * @param pageable contains pagination page and size
+     * @return paginated products and its details
+    */
+    public PaginationResponse<PublicProductResponse> getAllNewArrival(Pageable pageable){
+
+        Page<Product> productPage = productRepository.findAllNewArrival(LocalDateTime.now().minusDays(60), pageable);
+
+        List<Product> products = productPage.getContent();
+
+        List<Long> productIds = products.stream().map(product -> product.getId()).toList();
+
+        // Retrieve primary images for all products in the current page.
+        List<ProductFileListResponse> primaryImages = productFileRepository.findPrimaryImagesByProductIds(productIds)
+            .stream().map(file -> new ProductFileListResponse(
+                file.getId(),
+                file.getProduct().getId(),
+                file.getFilename(),
+                file.getName(),
+                file.getSize(),
+                file.getExtension(),
+                file.getMimeType(),
+                file.getIsPrimary()
+            )).toList();
+
+
+        // Group primary images by product ID for efficient lookup.
+        Map<Long, ProductFileListResponse> primaryImageByProduct = primaryImages.stream()
+            .collect(Collectors.toMap(
+                file -> file.productId(),
+                file -> file
+            ));
+        
+
+        List<PublicProductResponse> productLists =  products.stream().map(product -> {
+            
+                ProductFileListResponse primaryImage = primaryImageByProduct.get(product.getId());
+
+                String filename = primaryImage != null ? primaryImage.filename() : null;
+
+                String primaryImageUrl = fileStorage.getUrl("files/public/product/images/" + filename);
+                
+                return new PublicProductResponse(
+                    product.getId(),
+                    product.getCategory().getName(),
+                    product.getName(),
+                    product.getSlug(),
+                    product.getDescription(),
+                    product.getShortDescription(),
+                    product.getPrice(),
+                    product.getComparePrice(),
+                    product.getHasVariants(),
+                    primaryImageUrl
+                );   
+            }).toList();
+
+        return new PaginationResponse<>(
+            productLists,
+            productPage.getNumber() + 1,
+            productPage.getSize(),
+            productPage.getTotalElements(),
+            productPage.getTotalPages(),
+            productPage.hasNext(),
+            productPage.hasPrevious()
+        );
+
     }
 
     // --------------- Public --------------------

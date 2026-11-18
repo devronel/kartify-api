@@ -32,7 +32,7 @@ public class OrderController {
     this.orderService = orderService;
   }
 
-  // Get all the order by user
+  
   @PreAuthorize("@accountAuthorization.isEmailVerified(principal)")
   @GetMapping
   public ResponseEntity<PaginationResponse<OrderResponse>> getAll(
