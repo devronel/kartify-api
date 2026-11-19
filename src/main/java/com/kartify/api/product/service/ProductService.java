@@ -395,7 +395,7 @@ public class ProductService {
     /*
         TODO: When hasVariants changes in either direction, delete that product’s cart items.
     */
-   /**
+    /**
     * Save updated products
     * 
     * Includes product details, associated files, variants and its corresponding

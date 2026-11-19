@@ -62,6 +62,7 @@ public class ProductAdminController {
                 "pageSize must be between 1 and " + MAX_PAGE_SIZE
             );
         }
+
         Pageable pageable = PageRequest.of(page-1, pageSize, Sort.by(Sort.Direction.DESC, "updatedAt"));
         PaginationResponse<ProductAdminListResponse> products = productService.getAll(search, pageable);
         
@@ -101,6 +102,7 @@ public class ProductAdminController {
         @PathVariable Long id,
         @RequestBody Map<String, Boolean> body
     ){
+        
         Boolean active = body.get("active");
         productService.updateActive(id, active);
 

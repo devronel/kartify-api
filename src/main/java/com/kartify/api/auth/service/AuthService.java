@@ -196,7 +196,7 @@ public class AuthService {
         context.setVariable("resetUrl",  frontendUrl + "/reset-password?email=" + user.getEmail() + "&token=" + token);
         String htmlContent = templateEngine.process("password-reset-email", context);
 
-        emailService.sendEmail(
+        emailService.sendHtmlEmail(
             user.getEmail(),
             "Password Reset Link",
             htmlContent

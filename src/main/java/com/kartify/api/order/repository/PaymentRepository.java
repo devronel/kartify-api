@@ -34,4 +34,15 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
   """)
   List<Payment> findAllDesc(@Param("orderIds") List<Long> orderIds);
 
+
+  @Query("""
+    SELECT payment FROM Payment payment
+    WHERE payment.order.id IN :orderIds
+      AND payment.createdAt = (
+        SELECT MAX(p2.createdAt) FROM Payment p2
+        WHERE p2.order = payment.order
+      )
+  """)
+  List<Payment> findAllLatestByOrderIds(@Param("orderIds") List<Long> orderIds);
+
 }
