@@ -9,7 +9,14 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import com.kartify.api.contract.FileStorage;
+import com.kartify.api.exception.ResourceNotFoundException;
+import com.kartify.api.order.dto.AddressInformationResponse;
+import com.kartify.api.order.dto.AdminOrderDetailsResponse;
+import com.kartify.api.order.dto.AdminOrderItemResponse;
+import com.kartify.api.order.dto.AdminOrderPaymentResponse;
 import com.kartify.api.order.dto.AdminOrderResponse;
+import com.kartify.api.order.dto.AdminOrderTimelineResponse;
 import com.kartify.api.order.entity.Order;
 import com.kartify.api.order.entity.OrderItem;
 import com.kartify.api.order.entity.OrderStatusHistory;
@@ -28,17 +35,20 @@ public class AdminOrderService {
   private final OrderItemRepository orderItemRepository;
   private final PaymentRepository paymentRepository;
   private final OrderStatusHistoryRepository orderStatusHistoryRepository;
+  private final FileStorage fileStorage;
 
   public AdminOrderService(
     OrderRepository orderRepository,
     OrderItemRepository orderItemRepository,
     PaymentRepository paymentRepository,
-    OrderStatusHistoryRepository orderStatusHistoryRepository
+    OrderStatusHistoryRepository orderStatusHistoryRepository,
+    FileStorage fileStorage
   ){
     this.orderRepository = orderRepository;
     this.orderItemRepository = orderItemRepository;
     this.paymentRepository = paymentRepository;
     this.orderStatusHistoryRepository = orderStatusHistoryRepository;
+    this.fileStorage = fileStorage;
   }
 
   
@@ -109,4 +119,97 @@ public class AdminOrderService {
 
   }
 
+
+  /**
+   * Get order details
+   * 
+   * Includes all the order information such as order items, timelines
+   * payments, amounts and shipping address that important to admin user
+   * 
+   * @param orderNumber
+   * @return all the order information
+   */
+  public AdminOrderDetailsResponse getDetails(String orderNumber){
+
+    Order order = orderRepository.findByOrderNumber(orderNumber)
+      .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+
+
+    AddressInformationResponse address = new AddressInformationResponse(
+      null,
+      null,
+      order.getShippingRecipientName(),
+      order.getShippingPhone(),
+      order.getShippingAddressLine1(),
+      order.getShippingAddressLine2(),
+      order.getShippingBarangay(),
+      order.getShippingCity(),
+      order.getShippingProvince(),
+      order.getShippingRegion(),
+      order.getShippingPostalCode(),
+      order.getShippingCountry(),
+      null
+    );
+
+
+    List<AdminOrderItemResponse> orderItems = orderItemRepository.findAllByOrderId(order.getId())
+      .stream()
+      .map(orderItem -> {
+        return new AdminOrderItemResponse(
+          orderItem.getId(),
+          orderItem.getProductName(),
+          orderItem.getVariantLabel(),
+          orderItem.getSku(),
+          fileStorage.getUrl("files/public/product/images/" + orderItem.getProductImage()),
+          orderItem.getPrice(),
+          orderItem.getQuantity(),
+          orderItem.getLineTotal()
+        );
+      }).toList();
+
+
+    List<AdminOrderPaymentResponse> payments = paymentRepository.findAllByOrderIdOrderByCreatedAtDesc(order.getId())
+      .stream()
+      .map(payment -> new AdminOrderPaymentResponse(
+        payment.getStatus(),
+        payment.getPaymentMethod(),
+        payment.getProvider(),
+        payment.getProviderPaymentId(),
+        payment.getAmount(),
+        payment.getPaidAt(),
+        payment.getCreatedAt()
+      )).toList();
+
+
+    List<AdminOrderTimelineResponse> timelines = orderStatusHistoryRepository.findAllByOrderIdOrderByCreatedAtDesc(order.getId())
+      .stream()
+      .map(orderStatusHistory -> new AdminOrderTimelineResponse(
+        orderStatusHistory.getStatus(),
+        orderStatusHistory.getNotes(),
+        orderStatusHistory.getChangedBy() != null ? orderStatusHistory.getChangedBy().getFullName() : null,
+        orderStatusHistory.getCreatedAt()
+      ))
+      .toList();
+
+      
+    return new AdminOrderDetailsResponse(
+      order.getOrderNumber(),
+      order.getStatus(),
+      order.getCreatedAt(),
+      LocalDateTime.now(),
+      order.getNotes(),
+      LocalDateTime.now(),
+      order.getUser().getFullName(),
+      order.getUser().getEmail(),
+      order.getSubtotal(),
+      order.getShippingFee(),
+      order.getDiscountAmount(),
+      order.getTotal(),
+      address,
+      orderItems,
+      payments,
+      timelines
+    );
+
+  }
 }

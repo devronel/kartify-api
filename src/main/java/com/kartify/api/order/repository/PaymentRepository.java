@@ -35,6 +35,9 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
   List<Payment> findAllDesc(@Param("orderIds") List<Long> orderIds);
 
 
+  List<Payment> findAllByOrderIdOrderByCreatedAtDesc(Long orderId);
+
+
   @Query("""
     SELECT payment FROM Payment payment
     WHERE payment.order.id IN :orderIds

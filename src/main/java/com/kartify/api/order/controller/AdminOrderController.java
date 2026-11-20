@@ -5,10 +5,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.kartify.api.order.dto.AdminOrderDetailsResponse;
 import com.kartify.api.order.dto.AdminOrderResponse;
 import com.kartify.api.order.service.AdminOrderService;
 import com.kartify.api.shared.dto.PaginationResponse;
@@ -42,6 +44,13 @@ public class AdminOrderController {
 
     return ResponseEntity.ok(orders);
 
+  }
+
+
+  @GetMapping("/{orderNumber}")
+  public ResponseEntity<AdminOrderDetailsResponse> getDetails(@PathVariable("orderNumber") String orderNumber){
+    AdminOrderDetailsResponse order = adminOrderService.getDetails(orderNumber) ;
+    return ResponseEntity.ok(order);
   }
 
 }

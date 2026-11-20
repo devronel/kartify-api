@@ -30,4 +30,7 @@ public interface OrderStatusHistoryRepository extends JpaRepository<OrderStatusH
   """)
   List<OrderStatusHistory> findAllLatestByOrderIds(@Param("orderIds") List<Long> orderIds);
 
+
+  List<OrderStatusHistory> findAllByOrderIdOrderByCreatedAtDesc(Long orderId);
+
 }

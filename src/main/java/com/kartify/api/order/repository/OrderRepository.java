@@ -56,4 +56,6 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
   """)
   Optional<Order> findByOrderNumberAndUserId(@Param("orderNumber") String orderNumber, @Param("userId") Long userId);
 
+
+  Optional<Order> findByOrderNumber(String orderNumber);
 }

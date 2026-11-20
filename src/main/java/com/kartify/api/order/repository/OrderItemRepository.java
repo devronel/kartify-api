@@ -12,11 +12,13 @@ import com.kartify.api.order.entity.OrderItem;
 @Repository
 public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
 
-  // Find all the items using order ids
   @Query("""
     SELECT orderItem
     FROM OrderItem orderItem
     WHERE orderItem.order.id IN :orderIds
   """)
   List<OrderItem> findAllByOrderIds(@Param("orderIds") List<Long> orderIds);
+
+
+  List<OrderItem> findAllByOrderId(Long orderId);
 }
