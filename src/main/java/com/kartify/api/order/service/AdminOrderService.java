@@ -7,12 +7,14 @@ import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import com.kartify.api.contract.FileStorage;
 import com.kartify.api.exception.ResourceNotFoundException;
 import com.kartify.api.order.dto.AddressInformationResponse;
 import com.kartify.api.order.dto.AdminOrderDetailsResponse;
+import com.kartify.api.order.dto.AdminOrderFilterRequest;
 import com.kartify.api.order.dto.AdminOrderItemResponse;
 import com.kartify.api.order.dto.AdminOrderPaymentResponse;
 import com.kartify.api.order.dto.AdminOrderResponse;
@@ -24,6 +26,7 @@ import com.kartify.api.order.entity.Payment;
 import com.kartify.api.order.enums.PaymentStatus;
 import com.kartify.api.order.repository.OrderItemRepository;
 import com.kartify.api.order.repository.OrderRepository;
+import com.kartify.api.order.repository.OrderSpecifications;
 import com.kartify.api.order.repository.OrderStatusHistoryRepository;
 import com.kartify.api.order.repository.PaymentRepository;
 import com.kartify.api.shared.dto.PaginationResponse;
@@ -61,9 +64,16 @@ public class AdminOrderService {
    * @param pageable
    * @return paginated order response
    */
-  public PaginationResponse<AdminOrderResponse> getAll(Pageable pageable){
+  public PaginationResponse<AdminOrderResponse> getAll(AdminOrderFilterRequest filterRequest, Pageable pageable){
 
-    Page<Order> orderPage = orderRepository.findAll(pageable);
+    // Query Filters
+    Specification<Order> specification = Specification.allOf(
+      OrderSpecifications.keyword(filterRequest.search()),
+      OrderSpecifications.status(filterRequest.status()),
+      OrderSpecifications.dateRange(filterRequest.dateFrom(), filterRequest.dateTo())
+    );
+
+    Page<Order> orderPage = orderRepository.findAll(specification, pageable);
 
     List<Order> orders = orderPage.getContent();
 
