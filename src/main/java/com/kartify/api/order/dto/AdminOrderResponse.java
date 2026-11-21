@@ -15,5 +15,6 @@ public record AdminOrderResponse(
   Integer orderItemCount,
   String cityAndProvince,
   LocalDateTime createdAt,
-  LocalDateTime statusUpdatedAt
+  LocalDateTime statusUpdatedAt,
+  boolean isExpired
 ) {}

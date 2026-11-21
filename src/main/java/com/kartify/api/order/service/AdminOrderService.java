@@ -1,5 +1,6 @@
 package com.kartify.api.order.service;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +24,7 @@ import com.kartify.api.order.entity.Order;
 import com.kartify.api.order.entity.OrderItem;
 import com.kartify.api.order.entity.OrderStatusHistory;
 import com.kartify.api.order.entity.Payment;
+import com.kartify.api.order.enums.OrderStatus;
 import com.kartify.api.order.enums.PaymentStatus;
 import com.kartify.api.order.repository.OrderItemRepository;
 import com.kartify.api.order.repository.OrderRepository;
@@ -33,6 +35,8 @@ import com.kartify.api.shared.dto.PaginationResponse;
 
 @Service
 public class AdminOrderService {
+
+  public static final Duration PENDING_HOLD = Duration.ofMinutes(30);
 
   private final OrderRepository orderRepository;
   private final OrderItemRepository orderItemRepository;
@@ -104,6 +108,9 @@ public class AdminOrderService {
 
     List<AdminOrderResponse> formattedOrders = orders.stream()
       .map(order -> {
+
+        boolean isExpired = order.isExpired(LocalDateTime.now(), PENDING_HOLD);
+
         return new AdminOrderResponse(
           order.getOrderNumber(),
           order.getShippingRecipientName(),
@@ -113,7 +120,8 @@ public class AdminOrderService {
           mappedOrderItemsCount.getOrDefault(order.getId(), null),
           order.getShippingCity() + ", " + order.getShippingProvince(),
           order.getCreatedAt(),
-          mappedlatestOrderStatusHistory.getOrDefault(order.getId(), null)
+          mappedlatestOrderStatusHistory.getOrDefault(order.getId(), null),
+          isExpired
         );
       }).toList();
 
@@ -201,14 +209,23 @@ public class AdminOrderService {
       ))
       .toList();
 
+
+    OrderStatusHistory latestStatusHistory = orderStatusHistoryRepository.findFirstByOrderIdOrderByCreatedAtDesc(order.getId())
+      .orElseThrow(() -> new ResourceNotFoundException("Latest Payment not found."));
+
+
+    boolean isExpired = order.isExpired(LocalDateTime.now(), PENDING_HOLD);
+    LocalDateTime expiresAt = order.getStatus() == OrderStatus.PENDING ? order.expiresAt(PENDING_HOLD) : null;
+
       
     return new AdminOrderDetailsResponse(
       order.getOrderNumber(),
       order.getStatus(),
       order.getCreatedAt(),
-      LocalDateTime.now(),
+      latestStatusHistory.getCreatedAt(),
       order.getNotes(),
-      LocalDateTime.now(),
+      expiresAt,
+      isExpired,
       order.getUser().getFullName(),
       order.getUser().getEmail(),
       order.getSubtotal(),
