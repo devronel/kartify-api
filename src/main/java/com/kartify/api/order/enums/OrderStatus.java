@@ -1,5 +1,7 @@
 package com.kartify.api.order.enums;
 
+import java.util.List;
+
 public enum OrderStatus {
   PENDING,
   PAID,
@@ -15,6 +17,16 @@ public enum OrderStatus {
       case PROCESSING -> next == SHIPPED || next == CANCELLED;
       case SHIPPED    -> next == DELIVERED;
       case DELIVERED, CANCELLED -> false; 
+    };
+  }
+
+  public List<AdminOrderAction> adminActions(){
+    return switch (this) {
+      case PENDING -> List.of(AdminOrderAction.CANCEL);
+      case PAID -> List.of(AdminOrderAction.START_PROCESSING);
+      case PROCESSING -> List.of(AdminOrderAction.MARK_SHIPPED);
+      case SHIPPED -> List.of(AdminOrderAction.MARK_DELIVERED);
+      case DELIVERED, CANCELLED -> List.of();
     };
   }
 

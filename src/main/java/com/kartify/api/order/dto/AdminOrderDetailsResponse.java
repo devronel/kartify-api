@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.kartify.api.order.enums.AdminOrderAction;
 import com.kartify.api.order.enums.OrderStatus;
 
 public record AdminOrderDetailsResponse(
@@ -23,5 +24,6 @@ public record AdminOrderDetailsResponse(
   AddressInformationResponse address,
   List<AdminOrderItemResponse> orderItems,
   List<AdminOrderPaymentResponse> paymentAttempts,
-  List<AdminOrderTimelineResponse> timelines
+  List<AdminOrderTimelineResponse> timelines,
+  List<AdminOrderAction> allowedActions
 ) {}

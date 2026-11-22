@@ -29,6 +29,7 @@ import com.kartify.api.order.entity.Order;
 import com.kartify.api.order.entity.OrderItem;
 import com.kartify.api.order.entity.OrderStatusHistory;
 import com.kartify.api.order.entity.Payment;
+import com.kartify.api.order.enums.AdminOrderAction;
 import com.kartify.api.order.enums.OrderStatus;
 import com.kartify.api.order.enums.PaymentStatus;
 import com.kartify.api.order.repository.OrderItemRepository;
@@ -38,6 +39,7 @@ import com.kartify.api.order.repository.OrderStatusHistoryRepository;
 import com.kartify.api.order.repository.PaymentRepository;
 import com.kartify.api.shared.dto.PaginationResponse;
 import com.kartify.api.user.entity.User;
+import com.kartify.api.user.enums.Role;
 import com.kartify.api.user.repository.UserRepository;
 
 @Service
@@ -222,7 +224,11 @@ public class AdminOrderService {
       .map(orderStatusHistory -> new AdminOrderTimelineResponse(
         orderStatusHistory.getStatus(),
         orderStatusHistory.getNotes(),
-        orderStatusHistory.getChangedBy() != null ? orderStatusHistory.getChangedBy().getFullName() : null,
+        orderStatusHistory.getChangedBy() != null 
+          ? orderStatusHistory.getChangedBy().getRole() == Role.ADMIN 
+            ? "Changed by Admin" 
+            : orderStatusHistory.getChangedBy().getFullName() 
+          : "System",
         orderStatusHistory.getCreatedAt()
       ))
       .toList();
@@ -253,7 +259,8 @@ public class AdminOrderService {
       address,
       orderItems,
       payments,
-      timelines
+      timelines,
+      order.getStatus().adminActions()
     );
 
   }
@@ -273,15 +280,25 @@ public class AdminOrderService {
   @Transactional
   public void updateStatus(Long userId, String orderNumber, AdminOrderStatusUpdateRequest payload){
 
-    if (!ADMIN_SETTABLE.contains(payload.status())) {
+    String notes = (payload.notes() == null || payload.notes().isBlank()) ? null : payload.notes().trim();
+
+    if (payload.status() == OrderStatus.PAID || payload.status() == OrderStatus.CANCELLED) {
       throw new FieldValidationException("status", "This status can't be set here.");
     }
 
+    if (payload.status() == OrderStatus.SHIPPED && notes == null) {
+      throw new FieldValidationException("notes", "Enter the courier and tracking number.");
+    }
+
+    // Lock the order data before execute the update to avoid multiple transaction in the same data at the same time
     Order order = orderRepository.findByOrderNumberForUpdate(orderNumber)
       .orElseThrow(() -> new ResourceNotFoundException("Order not found."));
 
-    if (!order.getStatus().canTransitionTo(payload.status())) {
-      throw new FieldValidationException("status", "Can't change an order from " + order.getStatus() + " to " + payload.status() + ".");
+    boolean allowed = order.getStatus().adminActions().stream()
+      .anyMatch(action -> action.target() == payload.status() && action != AdminOrderAction.CANCEL);
+
+    if(!allowed){
+      throw new FieldValidationException("status", "This action isn't available for the order's current status. Please refresh and try again.");
     }
 
     User user = userRepository.getReferenceById(userId);
