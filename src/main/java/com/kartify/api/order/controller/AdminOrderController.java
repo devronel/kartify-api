@@ -1,12 +1,17 @@
 package com.kartify.api.order.controller;
 
+import java.util.Map;
+
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -14,8 +19,12 @@ import org.springframework.web.bind.annotation.RestController;
 import com.kartify.api.order.dto.AdminOrderDetailsResponse;
 import com.kartify.api.order.dto.AdminOrderFilterRequest;
 import com.kartify.api.order.dto.AdminOrderResponse;
+import com.kartify.api.order.dto.AdminOrderStatusUpdateRequest;
 import com.kartify.api.order.service.AdminOrderService;
+import com.kartify.api.security.CustomUserDetails;
 import com.kartify.api.shared.dto.PaginationResponse;
+
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/admin/orders")
@@ -54,6 +63,20 @@ public class AdminOrderController {
   public ResponseEntity<AdminOrderDetailsResponse> getDetails(@PathVariable("orderNumber") String orderNumber){
     AdminOrderDetailsResponse order = adminOrderService.getDetails(orderNumber) ;
     return ResponseEntity.ok(order);
+  }
+
+
+  @PatchMapping("/{orderNumber}/status")
+  public ResponseEntity<Void> updateStatus(
+    @AuthenticationPrincipal CustomUserDetails principal,
+    @PathVariable("orderNumber") String orderNumber,
+    @Valid @RequestBody AdminOrderStatusUpdateRequest request
+  ){
+    
+    adminOrderService.updateStatus(principal.getId(), orderNumber, request);
+
+    return ResponseEntity.noContent().build();
+
   }
 
 }

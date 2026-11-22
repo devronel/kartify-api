@@ -2,16 +2,20 @@ package com.kartify.api.order.service;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.kartify.api.contract.FileStorage;
+import com.kartify.api.exception.FieldValidationException;
 import com.kartify.api.exception.ResourceNotFoundException;
 import com.kartify.api.order.dto.AddressInformationResponse;
 import com.kartify.api.order.dto.AdminOrderDetailsResponse;
@@ -19,6 +23,7 @@ import com.kartify.api.order.dto.AdminOrderFilterRequest;
 import com.kartify.api.order.dto.AdminOrderItemResponse;
 import com.kartify.api.order.dto.AdminOrderPaymentResponse;
 import com.kartify.api.order.dto.AdminOrderResponse;
+import com.kartify.api.order.dto.AdminOrderStatusUpdateRequest;
 import com.kartify.api.order.dto.AdminOrderTimelineResponse;
 import com.kartify.api.order.entity.Order;
 import com.kartify.api.order.entity.OrderItem;
@@ -32,30 +37,43 @@ import com.kartify.api.order.repository.OrderSpecifications;
 import com.kartify.api.order.repository.OrderStatusHistoryRepository;
 import com.kartify.api.order.repository.PaymentRepository;
 import com.kartify.api.shared.dto.PaginationResponse;
+import com.kartify.api.user.entity.User;
+import com.kartify.api.user.repository.UserRepository;
 
 @Service
 public class AdminOrderService {
 
   public static final Duration PENDING_HOLD = Duration.ofMinutes(30);
+  public static final Set<OrderStatus> ADMIN_SETTABLE = EnumSet.of(
+    OrderStatus.PROCESSING,
+    OrderStatus.SHIPPED,
+    OrderStatus.DELIVERED
+  );
 
   private final OrderRepository orderRepository;
   private final OrderItemRepository orderItemRepository;
   private final PaymentRepository paymentRepository;
   private final OrderStatusHistoryRepository orderStatusHistoryRepository;
+  private final UserRepository userRepository;
   private final FileStorage fileStorage;
+  private final OrderService orderService;
 
   public AdminOrderService(
     OrderRepository orderRepository,
     OrderItemRepository orderItemRepository,
     PaymentRepository paymentRepository,
     OrderStatusHistoryRepository orderStatusHistoryRepository,
-    FileStorage fileStorage
+    UserRepository userRepository,
+    FileStorage fileStorage,
+    OrderService orderService
   ){
     this.orderRepository = orderRepository;
     this.orderItemRepository = orderItemRepository;
     this.paymentRepository = paymentRepository;
     this.orderStatusHistoryRepository = orderStatusHistoryRepository;
+    this.userRepository = userRepository;
     this.fileStorage = fileStorage;
+    this.orderService = orderService;
   }
 
   
@@ -239,4 +257,36 @@ public class AdminOrderService {
     );
 
   }
+
+
+  /**
+   * Update order status
+   * 
+   * It can update status Processing, Shipped and Delivered only.
+   * It create new order status history that include notes and the 
+   * admin who call this function.
+   * 
+   * @param userId to get the admin id
+   * @param orderNumber of order
+   * @param payload include the status and notes
+   */
+  @Transactional
+  public void updateStatus(Long userId, String orderNumber, AdminOrderStatusUpdateRequest payload){
+
+    if (!ADMIN_SETTABLE.contains(payload.status())) {
+      throw new FieldValidationException("status", "This status can't be set here.");
+    }
+
+    Order order = orderRepository.findByOrderNumberForUpdate(orderNumber)
+      .orElseThrow(() -> new ResourceNotFoundException("Order not found."));
+
+    if (!order.getStatus().canTransitionTo(payload.status())) {
+      throw new FieldValidationException("status", "Can't change an order from " + order.getStatus() + " to " + payload.status() + ".");
+    }
+
+    User user = userRepository.getReferenceById(userId);
+    orderService.changeStatus(order, payload.status(), payload.notes(), user);
+
+  }
+
 }

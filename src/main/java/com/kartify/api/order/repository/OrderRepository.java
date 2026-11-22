@@ -59,4 +59,9 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
 
 
   Optional<Order> findByOrderNumber(String orderNumber);
+
+
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("SELECT order FROM Order order WHERE order.orderNumber = :orderNumber LIMIT 1")
+  Optional<Order> findByOrderNumberForUpdate(@Param("orderNumber") String orderNumber);
 }
