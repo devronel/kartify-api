@@ -55,4 +55,13 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
     """)
     int decrementStock(@Param("id") Long id, @Param("qty") int qty);
 
+
+    @Modifying
+    @Query("""
+        UPDATE ProductVariant variant
+        SET variant.stockQuantity = variant.stockQuantity + :qty
+        WHERE variant.id = :id
+    """)
+    int incrementStock(@Param("id") Long id, @Param("qty") int qty);
+
 }

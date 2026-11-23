@@ -1,5 +1,6 @@
 package com.kartify.api.order.repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -10,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.kartify.api.order.entity.Payment;
+import com.kartify.api.order.enums.PaymentStatus;
 
 import jakarta.persistence.LockModeType;
 
@@ -47,5 +49,8 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
       )
   """)
   List<Payment> findAllLatestByOrderIds(@Param("orderIds") List<Long> orderIds);
+
+
+  List<Payment> findAllByOrderIdAndStatusIn(Long orderIds, Collection<PaymentStatus> statuses);
 
 }

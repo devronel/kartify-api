@@ -51,6 +51,7 @@ import com.kartify.api.shared.dto.PaginationResponse;
 import com.kartify.api.user.entity.User;
 import com.kartify.api.user.entity.UserAddress;
 import com.kartify.api.user.repository.UserAddressRepository;
+import com.kartify.api.user.repository.UserRepository;
 
 @Service
 public class OrderService {
@@ -65,6 +66,7 @@ public class OrderService {
   private final OrderRepository orderRepository;
   private final OrderItemRepository orderItemRepository;
   private final PaymentRepository paymentRepository;
+  private final UserRepository userRepository;
   private final FileStorage fileStorage;
 
   // Constructor
@@ -76,6 +78,7 @@ public class OrderService {
     OrderRepository orderRepository,
     OrderItemRepository orderItemRepository,
     PaymentRepository paymentRepository,
+    UserRepository userRepository,
     FileStorage fileStorage
   ){
     this.cartRepository = cartRepository;
@@ -85,6 +88,7 @@ public class OrderService {
     this.orderRepository = orderRepository;
     this.orderItemRepository = orderItemRepository;
     this.paymentRepository = paymentRepository;
+    this.userRepository = userRepository;
     this.fileStorage = fileStorage;
   }
 
@@ -565,6 +569,39 @@ public class OrderService {
             )
           )
         );
+      }
+    }
+  }
+
+
+  /**
+   * Increment the stock of products or product variants.
+   *
+   * Processes stock updates in a consistent order to reduce the risk
+   * of database deadlocks during concurrent transaction.
+   * 
+   * @param items
+   */
+  public void incrementStock(List<OrderItem> items) {
+
+    // Sort stock updates by type and ID to ensure concurrent checkout transactions
+    // acquire database row locks in a consistent order, reducing the risk of deadlocks.
+    List<OrderItem> sorted = items.stream()
+      .sorted(Comparator
+        .comparing((OrderItem i) -> i.getProductVariant() != null)
+        .thenComparing(i -> i.getProductVariant() != null
+          ? i.getProductVariant().getId()
+          : i.getProduct().getId()))
+      .toList();
+
+    for (OrderItem item : sorted) {
+
+      int updated = (item.getProductVariant() != null)
+        ? productVariantRepository.incrementStock(item.getProductVariant().getId(), item.getQuantity())
+        : productRepository.incrementStock(item.getProduct().getId(), item.getQuantity());
+
+      if (updated == 0) {
+        log.warn("Could not restore stock for order item {}: product or variant not found", item.getId());
       }
     }
   }

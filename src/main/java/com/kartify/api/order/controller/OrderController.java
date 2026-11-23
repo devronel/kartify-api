@@ -1,5 +1,7 @@
 package com.kartify.api.order.controller;
 
+import java.util.Map;
+
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -8,6 +10,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -15,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.kartify.api.order.dto.OrderDetailsResponse;
 import com.kartify.api.order.dto.OrderResponse;
 import com.kartify.api.order.enums.OrderStatus;
+import com.kartify.api.order.service.OrderCancellationService;
 import com.kartify.api.order.service.OrderService;
 import com.kartify.api.security.CustomUserDetails;
 import com.kartify.api.shared.dto.PaginationResponse;
@@ -27,9 +32,11 @@ public class OrderController {
   private final int MAX_PAGE_SIZE = 30;
 
   private final OrderService orderService;
+  private final OrderCancellationService orderCancellationService;
 
-  public OrderController(OrderService orderService){
+  public OrderController(OrderService orderService, OrderCancellationService orderCancellationService){
     this.orderService = orderService;
+    this.orderCancellationService = orderCancellationService;
   }
 
   
@@ -55,7 +62,6 @@ public class OrderController {
   }
 
 
-  // Get order by id
   @PreAuthorize("@accountAuthorization.isEmailVerified(principal)")
   @GetMapping("/{orderNumber}")
   public ResponseEntity<OrderDetailsResponse> getDetail(
@@ -66,6 +72,23 @@ public class OrderController {
     OrderDetailsResponse order = orderService.getDetail(principal.getId(), orderNumber);
 
     return ResponseEntity.ok(order);
+
+  }
+
+
+  @PreAuthorize("@accountAuthorization.isEmailVerified(principal)")
+  @PostMapping("/{orderNumber}/cancel")
+  public ResponseEntity<Void> cancelOrder(
+    @AuthenticationPrincipal CustomUserDetails principal,
+    @PathVariable String orderNumber,
+    @RequestBody Map<String, String> body
+  ){
+
+    String reason = body.get("reason");
+
+    orderCancellationService.cancelOrder(principal.getId(), orderNumber, reason);
+
+    return ResponseEntity.noContent().build();
 
   }
 
