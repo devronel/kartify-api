@@ -23,7 +23,10 @@ import com.kartify.api.user.repository.UserRepository;
 public class OrderCancellationService {
 
   private static final Logger log = LoggerFactory.getLogger(OrderCancellationService.class);
-  private static final List<PaymentStatus> OPEN_PAYMENT_STATUSES = List.of(PaymentStatus.CREATING, PaymentStatus.PENDING);
+  private static final List<PaymentStatus> OPEN_PAYMENT_STATUSES = List.of(
+    PaymentStatus.CREATING, 
+    PaymentStatus.PENDING
+  );
 
   private final OrderRepository orderRepository;
   private final PaymentRepository paymentRepository;
@@ -43,6 +46,19 @@ public class OrderCancellationService {
     this.orderService = orderService;
   }
 
+
+  /**
+   * Cancel the order of user
+   * 
+   * It cancell the order that have PENDING status only and lock the order
+   * before transaction
+   * 
+   * Call the cancelLockOrder()
+   * 
+   * @param userId of customer
+   * @param orderNumber
+   * @param reason for cancelling the order
+   */
   @Transactional
   public void cancelOrder(Long userId, String orderNumber, String reason){
 
@@ -58,6 +74,36 @@ public class OrderCancellationService {
   }
 
 
+  /**
+   * Cancel Order By Admin user
+   * 
+   * Admin can cancel all the order doesn't matter what is the status
+   * 
+   * @param userId
+   * @param orderNumber
+   * @param reason
+   */
+  @Transactional
+  public void cancelOrderByAdmin(Long userId, String orderNumber, String reason){
+
+    Order order = orderRepository.findByOrderNumberForUpdate(orderNumber)
+      .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+
+    cancelLockOrder(order, reason, userRepository.getReferenceById(userId));
+
+  }
+
+
+  /**
+   * Change status of Order to CANCELLED
+   * 
+   * It include the release of stock back to the associated product and
+   * update the all the open payment status into EXPIRED
+   * 
+   * @param order
+   * @param reason
+   * @param cancelledBy
+   */
   public void cancelLockOrder(Order order, String reason, User cancelledBy){
 
     orderService.changeStatus(order, OrderStatus.CANCELLED, reason, cancelledBy);

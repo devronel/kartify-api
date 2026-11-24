@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -21,6 +22,7 @@ import com.kartify.api.order.dto.AdminOrderFilterRequest;
 import com.kartify.api.order.dto.AdminOrderResponse;
 import com.kartify.api.order.dto.AdminOrderStatusUpdateRequest;
 import com.kartify.api.order.service.AdminOrderService;
+import com.kartify.api.order.service.OrderCancellationService;
 import com.kartify.api.security.CustomUserDetails;
 import com.kartify.api.shared.dto.PaginationResponse;
 
@@ -34,9 +36,14 @@ public class AdminOrderController {
   private final int MAX_PAGE_SIZE = 30;
 
   private final AdminOrderService adminOrderService;
+  private final OrderCancellationService orderCancellationService;
 
-  public AdminOrderController(AdminOrderService adminOrderService){
+  public AdminOrderController(
+    AdminOrderService adminOrderService,
+    OrderCancellationService orderCancellationService
+  ){
     this.adminOrderService = adminOrderService;
+    this.orderCancellationService = orderCancellationService;
   }
 
   @GetMapping
@@ -77,6 +84,18 @@ public class AdminOrderController {
 
     return ResponseEntity.noContent().build();
 
+  }
+
+
+  @PostMapping("/{orderNumber}/cancel")
+  public ResponseEntity<Void> cancelOrder(
+    @AuthenticationPrincipal CustomUserDetails principal,
+    @PathVariable("orderNumber") String orderNumber,
+    @RequestBody Map<String, String> body
+  ){
+    String reason = body.get("reason");
+    orderCancellationService.cancelOrderByAdmin(principal.getId(), orderNumber, reason);
+    return ResponseEntity.noContent().build();
   }
 
 }
