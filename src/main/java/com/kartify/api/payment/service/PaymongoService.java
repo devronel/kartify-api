@@ -7,8 +7,12 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import com.kartify.api.exception.PaymentCreationRejectedException;
@@ -24,6 +28,7 @@ import tools.jackson.databind.ObjectMapper;
 @Service
 public class PaymongoService implements PaymentProvider {
 
+  private static final Logger log = LoggerFactory.getLogger(PaymongoService.class);
   private final String secretKey;
   private final ObjectMapper objectMapper;
 
@@ -35,6 +40,7 @@ public class PaymongoService implements PaymentProvider {
   }
 
 
+  @Override
   public PaymentLink process(PaymentLinkRequest data) {
     
     HttpResponse<String> response;
@@ -113,6 +119,49 @@ public class PaymongoService implements PaymentProvider {
     );
 
   }  
+
+
+  @Override
+  @Async
+  public void archiveLinks(List<String> paymentLinkIds){
+    for (String paymentLinkId : paymentLinkIds) {
+      try {
+        archiveLink(paymentLinkId);
+      } catch (Exception e) {
+        log.warn("Failed to archive payment link {}", paymentLinkId, e);
+      }
+    }
+  }
+
+  
+  /**
+   * Archive the payment link
+   * 
+   * Connect to the paymongo api and use method PATCH
+   * to archive the status of payment to avoid reusing it
+   * 
+   * @param paymentLinkId
+   */
+  public void archiveLink(String paymentLinkId){
+    try {
+      String link = "https://api.paymongo.com/v1/payment_links/" + paymentLinkId;
+  
+      HttpRequest request = HttpRequest.newBuilder()
+        .uri(URI.create(link))
+        .header("accept", "application/json")
+        .header("content-type", "application/json")
+        .header("authorization", "Basic " + secretKey)
+        .method("PATCH", HttpRequest.BodyPublishers.ofString("{\"archive\":true}"))
+        .build();
+  
+      HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
+  
+    } catch (IOException e) {
+      throw new RuntimeException("PayMongo request failed", e);
+    } catch (InterruptedException e){
+      throw new RuntimeException("Request interrupted", e);
+    }
+  }
 
 }
 
