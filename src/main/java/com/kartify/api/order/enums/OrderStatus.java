@@ -23,8 +23,8 @@ public enum OrderStatus {
   public List<AdminOrderAction> adminActions(){
     return switch (this) {
       case PENDING -> List.of(AdminOrderAction.CANCEL);
-      case PAID -> List.of(AdminOrderAction.START_PROCESSING);
-      case PROCESSING -> List.of(AdminOrderAction.MARK_SHIPPED);
+      case PAID -> List.of(AdminOrderAction.START_PROCESSING, AdminOrderAction.CANCEL);
+      case PROCESSING -> List.of(AdminOrderAction.MARK_SHIPPED, AdminOrderAction.CANCEL);
       case SHIPPED -> List.of(AdminOrderAction.MARK_DELIVERED);
       case DELIVERED, CANCELLED -> List.of();
     };
