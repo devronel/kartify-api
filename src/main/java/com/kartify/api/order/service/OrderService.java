@@ -51,7 +51,6 @@ import com.kartify.api.shared.dto.PaginationResponse;
 import com.kartify.api.user.entity.User;
 import com.kartify.api.user.entity.UserAddress;
 import com.kartify.api.user.repository.UserAddressRepository;
-import com.kartify.api.user.repository.UserRepository;
 
 @Service
 public class OrderService {
@@ -66,7 +65,6 @@ public class OrderService {
   private final OrderRepository orderRepository;
   private final OrderItemRepository orderItemRepository;
   private final PaymentRepository paymentRepository;
-  private final UserRepository userRepository;
   private final FileStorage fileStorage;
 
   // Constructor
@@ -78,7 +76,6 @@ public class OrderService {
     OrderRepository orderRepository,
     OrderItemRepository orderItemRepository,
     PaymentRepository paymentRepository,
-    UserRepository userRepository,
     FileStorage fileStorage
   ){
     this.cartRepository = cartRepository;
@@ -88,7 +85,6 @@ public class OrderService {
     this.orderRepository = orderRepository;
     this.orderItemRepository = orderItemRepository;
     this.paymentRepository = paymentRepository;
-    this.userRepository = userRepository;
     this.fileStorage = fileStorage;
   }
 
@@ -409,6 +405,7 @@ public class OrderService {
       isExpired,
       expiresAt,
       order.getCreatedAt(),
+      order.getStatus() == OrderStatus.PENDING,
       orderItems,
       paymentSummaryResponse,
       timeline

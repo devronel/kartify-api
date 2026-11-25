@@ -31,6 +31,7 @@ public record OrderDetailsResponse(
   Boolean isExpired,
   LocalDateTime expiresAt,
   LocalDateTime createdAt,
+  boolean isCancellable,
 
   List<OrderItemsResponse> orderItems,
 
